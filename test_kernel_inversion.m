@@ -3,8 +3,12 @@
 % jbrussell 6/5/2020
 % modified 11/23/2021
 %
-addpath('./functions/');
-addpath('./bin_v3.30');
+path2BIN = './bin_v3.30/'; % path to surf96 binary
+PATH = getenv('PATH');
+if isempty(strfind(PATH,path2BIN))
+%     setenv('PATH', [PATH,':',path2BIN]);
+    setenv('PATH', [path2BIN,':',PATH]);
+end
 % Make binary files executable
 !chmod ++x ./bin_v3.30/*
 
