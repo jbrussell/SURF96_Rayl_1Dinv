@@ -9,6 +9,7 @@ if isempty(strfind(PATH,path2BIN))
 %     setenv('PATH', [PATH,':',path2BIN]);
     setenv('PATH', [path2BIN,':',PATH]);
 end
+addpath('./functions/')
 % Make binary files executable
 !chmod ++x ./bin_v3.30/*
 
