@@ -17,34 +17,49 @@ addpath('./functions/')
 eps_data = 1e0; % data fit
 eps_H = 5e-2; % norm damping
 eps_J = 1e-1; % first derivative smoothing
-eps_F = 1e-1; % second derivative smoothing
+eps_F = 3e-1; % second derivative smoothing
 
 % Other inversion parameters
 nit = 50; % total number of iterations
 nit_recalc_c = 10; % number of iterations after which to recalculate phase velocity and kernels
 
-%% Read in MINEOS model and convert to SURF96 layered model format
+%% Generate the synthetic dataset for this test
+%Read in MINEOS model and convert to SURF96 layered model format
 cardname = 'Nomelt_taper_eta_crust_INVpconstr_xi1.06_GRL19_Line1_dist100.00km';
-vec_T = logspace(log10(10),log10(40),20);
 
 % Get MINEOS model
 CARD = ['./MINEOS_CARD/',cardname,'.card'];
-[truemod, discs] = card2mod(CARD,200);
-% Keep track of discontinuities
-waterdepth = discs(1);
-seddepth = discs(2);
-mohodepth = discs(end);
+[truemod, discs] = card2mod(CARD,200); % true model
+% % Keep track of discontinuities
+% waterdepth = discs(1);
+% seddepth = discs(2);
+% mohodepth = discs(end);
 
-% Perturb the model to use as the starting model
-vs = truemod(:,3);
-vs_pre = vs;
-% vs_pre(5:11) = vs_pre(5:11)*1.05;
-vs_pre(12:25) = vs_pre(12:25)*1.05;
-startmod = truemod; startmod(:,3) = vs_pre;
-
+% GENERATE SYNTHETIC DATASET
 % Calculate dispersion for perturbed starting model and true model (which is like the data)
-cpre = dispR_surf96(vec_T,startmod); % "predictions"
+vec_T = logspace(log10(10),log10(40),20);
 cobs = dispR_surf96(vec_T,truemod); % "observations"
+
+%% Starting model
+% % Perturb the model to use as the starting model
+% vs = truemod(:,3);
+% vs_pre = vs;
+% % vs_pre(5:11) = vs_pre(5:11)*1.05;
+% vs_pre(12:25) = vs_pre(12:25)*1.05;
+% startmod = truemod; startmod(:,3) = vs_pre;
+
+% Make homogeneous starting model
+zh2o = 1.618; % [km] water depth
+zmoho = 20; % [km] moho depth
+zmax = 150;
+z = [0 zh2o:1:zmoho zmoho+1:5:zmax];
+dz = [diff(z) 0];
+vs = 4*ones(size(dz)); vs(1)=0; % water
+vp = 1.75*vs; vp(1)=1.5;
+rho = 3.3*ones(size(dz)); rho(1)=1.03;
+startmod = [dz(:), vp(:), vs(:), rho(:)];
+% discs = [zmoho]; % [km] depth to sharp discontinuities
+discs = []; % for this simple example, don't allow discontinuities
 
 %% Calculate kernels for G matrix using SURF96
 ifnorm = 0; % for plotting only
@@ -80,11 +95,13 @@ H = [H00*eps_H; J00*eps_J; F00*eps_F];
 h = [h0*eps_H; j0*eps_J; f0*eps_F];
 
 % Data vector
-cstart = cpre;
+cstart = dispR_surf96(vec_T,startmod); % "predictions";
+cpre = cstart;
 dc = cobs - cpre;
 
 % Least squares inversion
 premod = startmod;
+vs_pre = premod(:,3);
 for ii = 1:nit
     
     % reformulate inverse problem so that constraints apply directly to model
