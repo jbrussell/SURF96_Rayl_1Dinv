@@ -51,10 +51,10 @@ cobs = dispR_surf96(vec_T,truemod); % "observations"
 % Make homogeneous starting model
 zh2o = 1.618; % [km] water depth
 zmoho = 20; % [km] moho depth
-zmax = 150;
+zmax = 200;
 z = [0 zh2o:1:zmoho zmoho+1:5:zmax];
 dz = [diff(z) 0];
-vs = 4*ones(size(dz)); vs(1)=0; % water
+vs = 4.1*ones(size(dz)); vs(1)=0; % water
 vp = 1.75*vs; vp(1)=1.5;
 rho = 3.3*ones(size(dz)); rho(1)=1.03;
 startmod = [dz(:), vp(:), vs(:), rho(:)];
@@ -153,6 +153,7 @@ legend(lgd,'location','eastoutside');
 %%
 % Plot
 figure(100); clf; 
+set(gcf,'position',[370   372   967   580]);
 
 subplot(2,2,[1 3]); box on; hold on;
 h = plotlayermods(truemod(:,1),truemod(:,3),'-k');
@@ -164,6 +165,7 @@ h.LineWidth = 2;
 xlabel('Velocity');
 ylabel('Depth');
 set(gca,'FontSize',18,'linewidth',1.5);
+legend({'true','start','final'},'Location','southwest')
 
 subplot(2,2,2); box on; hold on;
 plot(vec_T,cobs,'-ok');
