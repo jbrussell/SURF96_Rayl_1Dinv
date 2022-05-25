@@ -203,12 +203,14 @@ for ii = 1:nit
     end
 end
 
+finalmod = premod;
+
 %% Plot final kernels
 figure(101); clf;
 Npers = length(vec_T);
 clr = jet(Npers);
 lgd = {};
-[dcdvs, dcdvp, dudvs, dudvp, zkern] = calc_kernel96(premod, vec_T, 'R', 1, 0);
+[dcdvs, dcdvp, dudvs, dudvp, zkern] = calc_kernel96(finalmod, vec_T, 'R', 1, 0);
 for ip = 1:Npers
     plot(dcdvs(:,ip),zkern,'-','color',clr(ip,:),'linewidth',2); hold on;
     lgd{ip} = [num2str(vec_T(ip)),' s'];
@@ -229,7 +231,7 @@ h = plotlayermods(truemod(:,1),truemod(:,3),'-k');
 h.LineWidth = 2;
 h = plotlayermods(startmod(:,1),startmod(:,3),'-b');
 h.LineWidth = 2;
-h = plotlayermods(premod(:,1),premod(:,3),'-r');
+h = plotlayermods(finalmod(:,1),finalmod(:,3),'-r');
 h.LineWidth = 2;
 xlabel('Velocity');
 ylabel('Depth');
@@ -238,11 +240,11 @@ legend({'true','start','final'},'Location','southwest')
 % legend({'start','final'},'Location','southwest')
 
 subplot(2,2,2); box on; hold on;
-cpre = dispR_surf96(vec_T,premod);
-errorbar(vec_T,cobs,2*cstd,'-ok');
-plot(vec_T,cstart,'-ob');
-plot(vec_T,cpre,'--or');
-legend({'c obs','c start','c pre'},'Location','southeast')
+cpre = dispR_surf96(vec_T,finalmod);
+plot(vec_T,cstart,'-ob','linewidth',2);
+plot(vec_T,cpre,'-or','linewidth',2);
+errorbar(vec_T,cobs,2*cstd,'sk','markersize',8,'markerfacecolor','k','linewidth',2);
+legend({'c start','c final','c obs'},'Location','southeast')
 xlabel('Period');
 ylabel('Phase Velocity');
 set(gca,'FontSize',18,'linewidth',1.5);
