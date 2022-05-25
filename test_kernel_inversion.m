@@ -42,7 +42,7 @@ CARD = ['./MINEOS_CARD/',cardname,'.card'];
 % Calculate dispersion for perturbed starting model and true model (which is like the data)
 vec_T = logspace(log10(10),log10(40),20);
 cobs = dispR_surf96(vec_T,truemod); % "observations"
-cstd = cobs * 0.02; % observation uncertainties
+cstd = cobs * 0.01; % observation uncertainties
 
 %% Starting model
 % Perturb the model to use as the starting model
@@ -194,7 +194,7 @@ for ii = 1:nit
         
         subplot(2,2,2);
         plot(vec_T,cpre,'-o','color',clrs(ii,:),'linewidth',2);
-        errorbar(vec_T,cobs,cstd,'or','linewidth',4);
+        errorbar(vec_T,cobs,2*cstd,'or','linewidth',4);
         xlabel('Period');
         ylabel('Phase Velocity');
         set(gca,'FontSize',18,'linewidth',1.5);
@@ -239,7 +239,7 @@ legend({'true','start','final'},'Location','southwest')
 
 subplot(2,2,2); box on; hold on;
 cpre = dispR_surf96(vec_T,premod);
-errorbar(vec_T,cobs,cstd,'-ok');
+errorbar(vec_T,cobs,2*cstd,'-ok');
 plot(vec_T,cstart,'-ob');
 plot(vec_T,cpre,'--or');
 legend({'c obs','c start','c pre'},'Location','southeast')
