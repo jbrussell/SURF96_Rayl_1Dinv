@@ -40,9 +40,10 @@ for i=1:L			%for all layers
     end
 end
 if (nargin==2)
-    h = plot(mod,-dep);
+    h = plot(mod,dep);
 else
-    h = plot(mod,-dep,lintype);
+    h = plot(mod,dep,lintype);
 end
+set(gca,'ydir','reverse');
 %axis('ij');
 
