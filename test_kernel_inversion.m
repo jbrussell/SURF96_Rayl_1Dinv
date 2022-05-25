@@ -198,8 +198,8 @@ for ii = 1:nit
         xlabel('Period');
         ylabel('Phase Velocity');
         set(gca,'FontSize',18,'linewidth',1.5);
-        pause;
-%         drawnow
+        % pause;
+        drawnow
     end
 end
 
