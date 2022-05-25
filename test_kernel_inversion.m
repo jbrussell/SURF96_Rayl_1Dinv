@@ -162,6 +162,9 @@ for ii = 1:nit
     vs_pre = vs_pre + dvs;
     premod(:,3) = vs_pre;
     
+    % Model uncertainties
+    vs_std = diag(inv(F'*F)).^(1/2);
+    
     if mod(ii,nit_recalc_c)==0
         cpre = dispR_surf96(vec_T,premod);
         dc = cobs - cpre;
@@ -232,6 +235,10 @@ h.LineWidth = 2;
 h = plotlayermods(startmod(:,1),startmod(:,3),'-b');
 h.LineWidth = 2;
 h = plotlayermods(finalmod(:,1),finalmod(:,3),'-r');
+h.LineWidth = 2;
+h = plotlayermods(finalmod(:,1),finalmod(:,3)-vs_std,'--r');
+h.LineWidth = 2;
+h = plotlayermods(finalmod(:,1),finalmod(:,3)+vs_std,'--r');
 h.LineWidth = 2;
 xlabel('Velocity');
 ylabel('Depth');
