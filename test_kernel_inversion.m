@@ -61,7 +61,7 @@ startmod = truemod; startmod(:,3) = vs_pre;
 % dz = [diff(z) 0];
 % vs = 4.1*ones(size(dz)); vs(1)=0; % water
 % vp = 1.75*vs; vp(1)=1.5;
-% rho = 3.3*ones(size(dz)); rho(1)=1.03;
+% rho = vp / 2.5; rho(1)=1.03;
 % startmod = [dz(:), vp(:), vs(:), rho(:)];
 % % discs = [zmoho]; % [km] depth to sharp discontinuities
 discs = []; % for this simple example, don't allow discontinuities
