@@ -256,7 +256,7 @@ while ii < nit_mcmc
     %     dvs = sample_model(1); % random Vs
     %     I_pert = ceil(rand(1)*size(startmod,1)); % randomly pick model parameter to perturb
     %     m_i(I_pert,3) = dvs(I_pert);
-        m_i(:,3) = dvs;
+        m_i(:,3) = dvs; % perturb all model parameters at once
         m_i(:,2) = par.vp_vs*m_i(:,3); m_i(m_i(:,3)==0,2)=1.5;
         m_i(:,4) = par.rho_vs*m_i(:,3); m_i(m_i(:,3)==0,4)=1.03;
         is_in_bounds = is_model_in_bounds(m_i,model_bounds);
