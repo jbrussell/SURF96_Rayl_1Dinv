@@ -36,6 +36,10 @@ par.lay3.dv_std = 0.05; % km/s (crust)
 par.lay4.dv_std = 0.05; % km/s (mantle)
 par.lay5.dv_std = 0; % km/s (halfspace) keep fixed
 
+% Scale vp and density with vs
+par.vp_vs = 1.75; % Vp/Vs
+par.rho_vs = 0.74; % density/Vs
+
 %% Generate the synthetic dataset for this test
 
 % Load what we will consider the "true model"
@@ -59,8 +63,10 @@ zmax = 200;
 z = [0 zh2o zsed zmoho zmax];
 dz = [diff(z) 0];
 vs = [0 2.5 3.5 4.4 4.4]; 
-vp = 1.75*vs; vp(1)=1.5;
-rho = vp / 2.5; rho(1)=1.03;
+% vp = 1.75*vs; vp(1)=1.5;
+vp = par.vp_vs * vs; vp(vs==0)=1.5;
+% rho = vp / 2.5; rho(1)=1.03;
+rho = par.rho_vs * vs; rho(vs==0)=1.03;
 truemod = [dz(:), vp(:), vs(:), rho(:)];
 
 % GENERATE SYNTHETIC DATASET
@@ -82,9 +88,11 @@ dz = [diff(z) 0];
 vs = [0 2.5-0.2 3.5-0.4 4.4+0.4 4.4]; 
 % vs = [0 3.5 3.5 3.5 4.4]; 
 % vp = 1.75*vs; vp(1)=1.5;
-vp = truemod(:,2);
+% vp = truemod(:,2);
+vp = par.vp_vs * vs; vp(vs==0)=1.5;
 % rho = vp / 2.5; rho(1)=1.03;
-rho = truemod(:,4);
+% rho = truemod(:,4);
+rho = par.rho_vs * vs; rho(vs==0)=1.03;
 startmod = [dz(:), vp(:), vs(:), rho(:)];
 
 figure(1); clf;
@@ -167,6 +175,8 @@ models = nan([size(startmod),nit_mcmc]);
 % Initiate
 m_j = startmod;
 m_j(:,3) = sample_model(1);
+m_j(:,2) = par.vp_vs*m_j(:,3); m_j(m_j(:,3)==0,2)=1.5;
+m_j(:,4) = par.rho_vs*m_j(:,3); m_j(m_j(:,3)==0,4)=1.03;
 ii = 0;
 ibad = 0;
 tic
@@ -174,6 +184,8 @@ while ii < nit_mcmc
     
     if ii>0 && mod(ii,nit_restart) == 0 % reinitialize mcmc, start over
         m_j(:,3) = sample_model(1);
+        m_j(:,2) = par.vp_vs*m_j(:,3); m_j(m_j(:,3)==0,2)=1.5;
+        m_j(:,4) = par.rho_vs*m_j(:,3); m_j(m_j(:,3)==0,4)=1.03;
 %         ibad = 0;
     end
     
@@ -190,6 +202,8 @@ while ii < nit_mcmc
     if L_j < eps || isnan(L_j) || ~is_in_bounds
         ibad = ibad+1;
         m_j(:,3) = sample_model(1);
+        m_j(:,2) = par.vp_vs*m_j(:,3); m_j(m_j(:,3)==0,2)=1.5;
+        m_j(:,4) = par.rho_vs*m_j(:,3); m_j(m_j(:,3)==0,4)=1.03;
         display(['Searching for stable starting model: ',num2str(ibad)]);
         continue
     end
@@ -233,9 +247,11 @@ while ii < nit_mcmc
         m_i = m_j;
         dvs = perturb_model(m_i(:,3),tau*[par.lay1.dv_std par.lay2.dv_std par.lay3.dv_std par.lay4.dv_std par.lay5.dv_std]); % perturb Vs
     %     dvs = sample_model(1); % random Vs
-        I_pert = ceil(rand(1)*size(startmod,1)); % randomly pick model parameter to perturb
-        m_i(I_pert,3) = dvs(I_pert);
-%         m_i(:,3) = dvs;
+    %     I_pert = ceil(rand(1)*size(startmod,1)); % randomly pick model parameter to perturb
+    %     m_i(I_pert,3) = dvs(I_pert);
+        m_i(:,3) = dvs;
+        m_i(:,2) = par.vp_vs*m_i(:,3); m_i(m_i(:,3)==0,2)=1.5;
+        m_i(:,4) = par.rho_vs*m_i(:,3); m_i(m_i(:,3)==0,4)=1.03;
         is_in_bounds = is_model_in_bounds(m_i,model_bounds);
     end
     c_i = dispR_surf96(periods,m_i); % predicted phase velocity
