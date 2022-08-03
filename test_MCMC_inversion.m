@@ -191,6 +191,13 @@ while ii < nit_mcmc
     
     % Previous model
     c_j = dispR_surf96(periods,m_j); % predicted phase velocity
+    if length(c_j) ~= length(periods) % check if something is wrong...
+        ibad = ibad+1;
+        m_j(:,3) = sample_model(1);
+        m_j(:,2) = par.vp_vs*m_j(:,3); m_j(m_j(:,3)==0,2)=1.5;
+        m_j(:,4) = par.rho_vs*m_j(:,3); m_j(m_j(:,3)==0,4)=1.03;
+        continue
+    end
     S_j = sum((cobs(:)-c_j(:)).^2./cstd(:).^2); % misfit
     L_j = ((2 * pi)^(length(periods)) * prod(cstd(:).^2)).^(-0.5) .* exp(-0.5 * S_j); % likelihood
 %     L_j = exp(-0.5 * S_j); % likelihood
@@ -255,6 +262,11 @@ while ii < nit_mcmc
         is_in_bounds = is_model_in_bounds(m_i,model_bounds);
     end
     c_i = dispR_surf96(periods,m_i); % predicted phase velocity
+    if length(c_i) ~= length(periods) % check if something is wrong...
+        m_i = m_j; % revert back to previous model
+        c_i = dispR_surf96(periods,m_i); % predicted phase velocity
+        continue
+    end
     S_i = sum((cobs(:)-c_i(:)).^2./cstd(:).^2); % misfit
     L_i = ((2 * pi)^(length(periods)) * prod(cstd(:).^2)).^(-0.5) .* exp(-0.5 * S_i); % likelihood
 %     L_i = exp(-0.5 * S_i); % likelihood
