@@ -470,73 +470,88 @@ set(gcf,'position',[322          31        1022         994]);
 
 % 1, 2
 subplot(4,4,1); box on; axis square; hold on;
-scatter(models(1,3,:),models(2,3,:),'.r');
+scatter(models(1,3,:),models(2,3,:),50,Likelihood,'.');
 ylabel('Sed Vs (lay 2)')
 xlabel('Water Vs (lay 1)');
 set(gca,'fontsize',13,'linewidth',1.5);
+colormap(gca,parula);
 
 % 1, 3
 subplot(4,4,5); box on; axis square; hold on;
-scatter(models(1,3,:),models(3,3,:),'.r');
+scatter(models(1,3,:),models(3,3,:),50,Likelihood,'.');
 ylabel('Crust Vs (lay 3)')
 xlabel('Water Vs (lay 1)');
 set(gca,'fontsize',13,'linewidth',1.5);
+colormap(gca,parula);
 
 % 2, 3
 subplot(4,4,6); box on; axis square; hold on;
-scatter(models(2,3,:),models(3,3,:),'.r');
+scatter(models(2,3,:),models(3,3,:),50,Likelihood,'.');
 ylabel('Crust Vs (lay 3)');
 xlabel('Sed Vs (lay 2)');
 set(gca,'fontsize',13,'linewidth',1.5);
+colormap(gca,parula);
 
 % 1,4
 subplot(4,4,9); box on; axis square; hold on;
-scatter(models(1,3,:),models(4,3,:),'.r');
+scatter(models(1,3,:),models(4,3,:),50,Likelihood,'.');
 ylabel('Mantle Vs (lay 4)')
 xlabel('Water Vs (lay 1)');
 set(gca,'fontsize',13,'linewidth',1.5);
+colormap(gca,parula);
 
 % 2,4
 subplot(4,4,10); box on; axis square; hold on;
-scatter(models(2,3,:),models(4,3,:),'.r');
+scatter(models(2,3,:),models(4,3,:),50,Likelihood,'.');
 ylabel('Mantle Vs (lay 4)');
 xlabel('Sed Vs (lay 2)');
 set(gca,'fontsize',13,'linewidth',1.5);
+colormap(gca,parula);
 
 % 3,4
 subplot(4,4,11); box on; axis square; hold on;
-scatter(models(3,3,:),models(4,3,:),'.r');
+scatter(models(3,3,:),models(4,3,:),50,Likelihood,'.');
 ylabel('Mantle Vs (lay 4)');
 xlabel('Crust Vs (lay 3)');
 set(gca,'fontsize',13,'linewidth',1.5);
+colormap(gca,parula);
 
 % 1,5
 subplot(4,4,13); box on; axis square; hold on;
-scatter(models(1,3,:),models(5,3,:),'.r');
+scatter(models(1,3,:),models(5,3,:),50,Likelihood,'.');
 ylabel('Halfspace Vs (lay 5)')
 xlabel('Water Vs (lay 1)');
 set(gca,'fontsize',13,'linewidth',1.5);
+colormap(gca,parula);
 
 % 2,5
 subplot(4,4,14); box on; axis square; hold on;
-scatter(models(2,3,:),models(5,3,:),'.r');
+scatter(models(2,3,:),models(5,3,:),50,Likelihood,'.');
 ylabel('Halfspace Vs (lay 5)');
 xlabel('Sed Vs (lay 2)');
 set(gca,'fontsize',13,'linewidth',1.5);
+colormap(gca,parula);
 
 % 3,5
 subplot(4,4,15); box on; axis square; hold on;
-scatter(models(3,3,:),models(5,3,:),'.r');
+scatter(models(3,3,:),models(5,3,:),50,Likelihood,'.');
 ylabel('Halfspace Vs (lay 5)');
 xlabel('Crust Vs (lay 3)');
 set(gca,'fontsize',13,'linewidth',1.5);
+colormap(gca,parula);
 
 % 4,5
 subplot(4,4,16); box on; axis square; hold on;
-scatter(models(4,3,:),models(5,3,:),'.r');
+scatter(models(4,3,:),models(5,3,:),50,Likelihood,'.');
 ylabel('Halfspace Vs (lay 5)');
 xlabel('Mantle Vs (lay 4)');
 set(gca,'fontsize',13,'linewidth',1.5);
+colormap(gca,parula);
+pos = get(gca,'Position');
+cb = colorbar;
+set(gca,'Position',pos);
+ylabel(cb,'Likelihood');
+set(cb,'Ticks',cb.Limits,'TickLabels',{'Low','High'},'linewidth',1.5,'fontsize',13);
 
 % Covariance matrix
 subplot(4,4,[3 4 7 8]);
@@ -550,7 +565,7 @@ for ii = 0:N
     plot((ii+0.5)*[1 1],[0.5 N+0.5],'-k','linewidth',1.5);
     plot([0.5 N+0.5],(ii+0.5)*[1 1],'-k','linewidth',1.5);
 end
-colormap(redblue);
+colormap(gca,redblue);
 cb = colorbar;
 ylabel(cb,'Correlation');
 set(cb,'linewidth',1.5);
