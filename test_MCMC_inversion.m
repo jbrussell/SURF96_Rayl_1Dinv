@@ -19,6 +19,8 @@ addpath('./functions/')
 nit_mcmc = 1000; % total number of iterations
 nit_restart = 250; %1e10; % number of iterations after which to restart with new random model (if never want to restart, set to giant number)
 N_cooldown = 100; %50; % number of iterations over which temperature parameter (tau) decays
+m_perturb_method = 'all'; % 'single' (perturb one model parameter at a time) | 'all' (perturb all at once)
+nit_plot = 250; % number of iterations after which to plot
 
 % Define bounds of allowed model space M relative to ref. model.
 % Models outside this space will not be allowed 
@@ -93,14 +95,14 @@ vp = par.vp_vs * vs; vp(vs==0)=1.5;
 % rho = vp / 2.5; rho(1)=1.03;
 % rho = truemod(:,4);
 rho = par.rho_vs * vs; rho(vs==0)=1.03;
-startmod = [dz(:), vp(:), vs(:), rho(:)];
+refmod = [dz(:), vp(:), vs(:), rho(:)];
 
 figure(1); clf;
 set(gcf,'position',[370   372   967   580]);
 subplot(2,2,[1 3]); box on; hold on;
 h = plotlayermods(truemod(:,1),truemod(:,3),'-k');
 h.LineWidth = 2;
-h = plotlayermods(startmod(:,1),startmod(:,3),'-b');
+h = plotlayermods(refmod(:,1),refmod(:,3),'-b');
 h.LineWidth = 2;
 xlabel('Velocity');
 ylabel('Depth');
@@ -109,9 +111,9 @@ legend({'true','start','final'},'Location','southwest')
 % legend({'start','final'},'Location','southwest')
 
 subplot(2,2,2); box on; hold on;
-cstart = dispR_surf96(periods,startmod); % predicted phase velocity
+cref = dispR_surf96(periods,refmod); % predicted phase velocity
 errorbar(periods,cobs,2*cstd,'sk','markersize',8,'markerfacecolor','k','linewidth',2);
-plot(periods,cstart,'-ob','linewidth',2);
+plot(periods,cref,'-ob','linewidth',2);
 legend({'c obs','c start'},'Location','southeast')
 xlabel('Period');
 ylabel('Phase Velocity');
@@ -120,11 +122,11 @@ set(gca,'FontSize',18,'linewidth',1.5);
 %% Define priors for each layer
 % Define edges of the model space M
 model_bounds = [
-                startmod(1,3)*(1+par.lay1.dv_M(1)) , startmod(1,3)*(1+par.lay1.dv_M(2));
-                startmod(2,3)*(1+par.lay2.dv_M(1)) , startmod(2,3)*(1+par.lay2.dv_M(2));
-                startmod(3,3)*(1+par.lay3.dv_M(1)) , startmod(3,3)*(1+par.lay3.dv_M(2));
-                startmod(4,3)*(1+par.lay4.dv_M(1)) , startmod(4,3)*(1+par.lay4.dv_M(2));
-                startmod(5,3)*(1+par.lay5.dv_M(1)) , startmod(5,3)*(1+par.lay5.dv_M(2));
+                refmod(1,3)*(1+par.lay1.dv_M(1)) , refmod(1,3)*(1+par.lay1.dv_M(2));
+                refmod(2,3)*(1+par.lay2.dv_M(1)) , refmod(2,3)*(1+par.lay2.dv_M(2));
+                refmod(3,3)*(1+par.lay3.dv_M(1)) , refmod(3,3)*(1+par.lay3.dv_M(2));
+                refmod(4,3)*(1+par.lay4.dv_M(1)) , refmod(4,3)*(1+par.lay4.dv_M(2));
+                refmod(5,3)*(1+par.lay5.dv_M(1)) , refmod(5,3)*(1+par.lay5.dv_M(2));
                ];
 
 % Uniform priors spanning M
@@ -165,15 +167,15 @@ plot(priors.vs_vec,priors.lay5_pdf);
 title('Priors');
 
 %% Do MCMC
-posterior = nan(size(startmod,1),nit_mcmc);
+posterior = nan(size(refmod,1),nit_mcmc);
 cpre = nan(length(cobs),nit_mcmc);
 misfit = nan(1,nit_mcmc);
 Likelihood = nan(1,nit_mcmc);
-vs_models = nan(size(startmod,1),nit_mcmc);
-models = nan([size(startmod),nit_mcmc]);
+vs_models = nan(size(refmod,1),nit_mcmc);
+models = nan([size(refmod),nit_mcmc]);
 
 % Initiate
-m_j = startmod;
+m_j = refmod;
 m_j(:,3) = sample_model(1);
 m_j(:,2) = par.vp_vs*m_j(:,3); m_j(m_j(:,3)==0,2)=1.5;
 m_j(:,4) = par.rho_vs*m_j(:,3); m_j(m_j(:,3)==0,4)=1.03;
@@ -254,9 +256,15 @@ while ii < nit_mcmc
         m_i = m_j;
         dvs = perturb_model(m_i(:,3),tau*[par.lay1.dv_std par.lay2.dv_std par.lay3.dv_std par.lay4.dv_std par.lay5.dv_std]); % perturb Vs
     %     dvs = sample_model(1); % random Vs
-    %     I_pert = ceil(rand(1)*size(startmod,1)); % randomly pick model parameter to perturb
-    %     m_i(I_pert,3) = dvs(I_pert);
-        m_i(:,3) = dvs; % perturb all model parameters at once
+        switch m_perturb_method
+            case 'single'
+                I_pert = ceil(rand(1)*size(refmod,1)); % randomly pick model parameter to perturb
+                m_i(I_pert,3) = dvs(I_pert);
+            case 'all'
+                m_i(:,3) = dvs; % perturb all model parameters at once
+            otherwise
+                error('m_perturb_method not a valid choice. must be ''single'' or ''all'' ');
+        end
         m_i(:,2) = par.vp_vs*m_i(:,3); m_i(m_i(:,3)==0,2)=1.5;
         m_i(:,4) = par.rho_vs*m_i(:,3); m_i(m_i(:,3)==0,4)=1.03;
         is_in_bounds = is_model_in_bounds(m_i,model_bounds);
@@ -272,6 +280,38 @@ while ii < nit_mcmc
 %     L_i = exp(-0.5 * S_i); % likelihood
     L_i = tau * L_i;
     
+    % Plot
+    if mod(ii,nit_plot) == 0
+        figure(2); clf;
+        subplot(2,2,1); box on; hold on;
+        yyaxis left
+        plot(1:ii,misfit(1:ii) / length(periods),'o'); hold on;
+        ylabel('Misfit');        
+        yyaxis right
+        plot(1:ii,log10(Likelihood(1:ii)),'o'); hold on;
+        ylabel('log_{10}(Likelihood)');
+        
+        subplot(2,2,[2 4]); box on; hold on;
+        for kk = 1:ii
+            h = plotlayermods(models(:,1,kk),models(:,3,kk),'-r');
+            h.LineWidth = 1;
+        end
+        h = plotlayermods(refmod(:,1),refmod(:,3),'-b');
+        h.LineWidth = 2;
+        xlabel('Vs (km/s)');
+        ylabel('Depth (km)');
+        set(gca,'FontSize',16,'linewidth',1.5);
+%         legend({'start','ensemble'},'Location','southwest')
+
+        subplot(2,2,3); box on; hold on;
+        plot(periods,cpre(:,1:ii),'-or','linewidth',1);
+        errorbar(periods,cobs,2*cstd,'sk','markersize',8,'markerfacecolor','k','linewidth',2);
+        plot(periods,cref,'-ob','linewidth',2);
+        xlabel('Period');
+        ylabel('Phase Velocity');
+        set(gca,'FontSize',16,'linewidth',1.5);
+        drawnow;
+    end
     
     % Metropolis-Hastings acceptance criterion
     p_accept = min(L_i/L_j, 1);
@@ -288,8 +328,8 @@ toc
 %% Calculate marginal pdfs
 vs_edges = [0:0.04:5];
 vs_vec = 0.5*(vs_edges(1:end-1)+vs_edges(2:end));
-marginal_pdf = zeros(size(startmod,1),length(vs_vec));
-for idim = 1:size(startmod,1)
+marginal_pdf = zeros(size(refmod,1),length(vs_vec));
+for idim = 1:size(refmod,1)
     ind_bin = discretize(vs_models(idim,:),vs_edges);
     marginal = zeros(size(vs_vec));
     for ii = 1:length(ind_bin)
@@ -300,7 +340,7 @@ end
 
 % 2-D MARGINAL PDFs
 % Convert from layers defined by a center point and width to knots like mineos
-z = [0; cumsum(startmod(1:end-1,1))];
+z = [0; cumsum(refmod(1:end-1,1))];
 z_lays = [];
 z_lays(1,1) = z(1);
 z_lays(2,1) = z(2);
@@ -359,7 +399,7 @@ end
 h = plotlayermods(truemod(:,1),truemod(:,3),'-k');
 h.LineWidth = 2;
 h1(2) = h;
-h = plotlayermods(startmod(:,1),startmod(:,3),'-b');
+h = plotlayermods(refmod(:,1),refmod(:,3),'-b');
 h.LineWidth = 2;
 h1(3) = h;
 [~,imin] = min(misfit);
@@ -378,9 +418,9 @@ legend(h1,{'final','true','start','best'},'Location','southwest')
 % legend({'start','final'},'Location','southwest')
 
 subplot(2,2,2); box on; hold on;
-cstart = dispR_surf96(periods,startmod); % predicted phase velocity
+cref = dispR_surf96(periods,refmod); % predicted phase velocity
 h2(1) = errorbar(periods,cobs,2*cstd,'sk','markersize',8,'markerfacecolor','k','linewidth',2);
-h2(2) = plot(periods,cstart,'-ob','linewidth',2);
+h2(2) = plot(periods,cref,'-ob','linewidth',2);
 h2(3) = plot(periods,cpre(:,imin),'--g','linewidth',2);
 h = plot(periods,cpre,'-or','linewidth',1);
 uistack(h,'bottom');
@@ -437,7 +477,7 @@ xlim([4 5]);
     
 %% Plot 2-D marginal probabilities
 
-% temp = layerizemod(startmod);
+% temp = layerizemod(refmod);
 % Z_lays = repmat(temp.z,1,size(marginal_pdf,2));
 % VS = repmat(vs_vec,size(Z_lays,1),1);
 % marginal_pdf_lays = [];
@@ -457,7 +497,7 @@ h = plotlayermods(truemod(:,1),truemod(:,3),'-k');
 h.LineWidth = 2;
 w = sum(posterior,1);
 vs_med = sum(w.*vs_models,2)./sum(w);
-h = plotlayermods(startmod(:,1),vs_med,'--r');
+h = plotlayermods(refmod(:,1),vs_med,'--r');
 h.LineWidth = 2;
 xlabel('Vs (km/s)');
 ylabel('Depth (km)');
