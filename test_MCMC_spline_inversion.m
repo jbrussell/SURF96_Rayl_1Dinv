@@ -111,6 +111,7 @@ zinterp = [0 zh2o zh2o:dz_int:zmax]';
 
 % Do spline calculations for reference (and true) model
 % zsp = [zh2o:50:zmax];
+% zsp = [linspace(zh2o,zmoho,5-1) linspace(zmoho,zmax,6-1)]; % example of custom spline spacing with a discontinuity
 zsp = linspace(zh2o,zmax,Nspline-1);
 Inoh2o = find(mod_true.vs~=0);
 Ih2o = find(mod_true.vs==0);
