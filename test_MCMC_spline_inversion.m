@@ -44,7 +44,7 @@ par.rho_vs = 0.74; % density/Vs
 % Spline parameters
 Nspline = 6; % Number of desired splines
 dz_int = 5; % (km) interpolated layer thicknesses. If too small, surf96 will break...
-zmax = 200;
+zmax = 200; % Maximum depth of starting model
 
 %% Generate the synthetic dataset for this test
 
