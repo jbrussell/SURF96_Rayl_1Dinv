@@ -364,7 +364,7 @@ for ivs = 1:size(marginal_pdf,2)
     end
 end
 bayesian.vs_mat = VS;
-bayesina.z_mat = Z_lays;
+bayesian.z_mat = Z_lays;
 bayesian.marginal_pdf_mat = marginal_pdf_lays;
 bayesian.marginal_pdf_vec = marginal_pdf;
 bayesian.vs_vec = vs_vec;
@@ -488,7 +488,7 @@ xlim([4 5]);
 
 figure(1002); clf; box on; hold on;
 % marginal_pdf_lays(marginal_pdf_lays==0) = nan;
-surface(bayesian.vs_mat-mean(diff(bayesian.vs_vec)),bayesina.z_mat,zeros(size(bayesian.marginal_pdf_mat)),log10(bayesian.marginal_pdf_mat),'edgecolor','none');
+surface(bayesian.vs_mat-mean(diff(bayesian.vs_vec)),bayesian.z_mat,zeros(size(bayesian.marginal_pdf_mat)),log10(bayesian.marginal_pdf_mat),'edgecolor','none');
 cb = colorbar;
 ylabel(cb,'log_{10}(Probability)')
 set(cb,'linewidth',1.5,'fontsize',16);
