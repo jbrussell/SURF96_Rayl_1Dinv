@@ -29,10 +29,11 @@ N_cooldown = 100; %50; % number of iterations over which temperature parameter (
 m_perturb_method = 'all'; % 'single' (perturb one model parameter at a time) | 'all' (perturb all at once)
 nit_plot = 250; % number of iterations after which to plot
 
-% Define bounds of allowed model space M relative to ref. model.
-% Models outside this space will not be allowed 
-% (this also acts as the min and max of the uniform prior)
-% By default, water layer is held at fixed velocity/density
+% Define bounds of allowed model space M relative to ref. model. For the spline
+% inversion, this applies to the Vs spline coefficients, not the layers.
+% Models occuring outside this space will not be allowed.
+% (these values also act as the min and max of the uniform prior)
+% If a water layer exists, it is held at fixed velocity/density
 par.dv_M = [-0.25 +0.25]; % pct of reference model
 
 % Define widths of gaussian perturbations made at each iteration
