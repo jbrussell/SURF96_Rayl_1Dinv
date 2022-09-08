@@ -181,20 +181,33 @@ priors.sample = @(N,ic) unifrnd(model_bounds(ic,1), model_bounds(ic,2) ,N,1);
 perturb_model = @(model,std_vec) normrnd(model(:)',std_vec)';
 
 % Get pdf from distributions
-vs_edges = [0:0.04:6];
+vs_edges = [0:0.04:7];
 vs_vec = 0.5*(vs_edges(1:end-1)+vs_edges(2:end));
 figure(1000);
 for ic = 1:Ncoeffs
     h = histogram(priors.sample(1000000,ic),vs_edges,'Normalization','probability');
-    priors.pdf{ic} = h.Values;
+    priors.pdf_sp{ic} = h.Values;
 end
 priors.vs_vec = vs_vec;
 
 figure(999); clf;
 for ic = 1:Ncoeffs
-    plot(priors.vs_vec,priors.pdf{ic}); hold on;
+    plot(priors.vs_vec,priors.pdf_sp{ic}); hold on;
 end
-title('Priors');
+title('Priors on Coefficients');
+
+% Project priors to layer space using spline basis
+pdf_mat_sp = [];
+for ic = 1:Ncoeffs
+    pdf_mat_sp(ic,:) = priors.pdf_sp{ic};
+end
+pdf_mat = spbasis*pdf_mat_sp;
+for ilay = 1:size(pdf_mat,1)
+    priors.pdf{ilay} = pdf_mat(ilay,:);
+end
+figure(11); clf;
+plot(priors.vs_vec,pdf_mat')
+title('Priors on Layers');
 
 %% Do MCMC
 posterior = nan(size(refmod_sp,1),nit_mcmc);
@@ -259,15 +272,23 @@ while ii < nit_mcmc
         display([num2str(ii),'/',num2str(nit_mcmc)]);
     end
     
-    % Calculate posterior probability of model j
+    % Calculate posterior probability of model j (spline coefficients)
     for ic = 1:Ncoeffs
         [~,I] = min(abs(m_j(ic,3)-priors.vs_vec));
-        posterior_sp(ic,ii) = L_j .* priors.pdf{ic}(I);
-%         [~,I] = min(abs(m_j(ic,3)-priors.vs_vec));
-%         posterior(ic,ii) = L_j .* priors.pdf{ic}(I);
+        posterior_sp(ic,ii) = L_j .* priors.pdf_sp{ic}(I);
     end
-    posterior(:,ii) = L_j;
-    
+    % Calculate posterior for layered structure
+    ipdf = 0;
+    for ilay = 1:size(posterior,1)
+        if splinemod_j(ilay,3)==0 % water layer
+            posterior(ilay,ii) = L_j * 1;
+            continue
+        end
+        ipdf = ipdf + 1;
+        [~,I] = min(abs(splinemod_j(ilay,3)-priors.vs_vec));
+        posterior(ilay,ii) = L_j .* priors.pdf{ipdf}(I);
+    end
+%     posterior(:,ii) = L_j;
     
     % Save outputs
     misfit(ii) = S_j;
@@ -372,7 +393,7 @@ end
 toc
 
 %% Calculate marginal pdfs
-vs_edges = [0:0.04:6];
+vs_edges = [0:0.04:7];
 vs_vec = 0.5*(vs_edges(1:end-1)+vs_edges(2:end));
 marginal_pdf = zeros(size(vs_models,1),length(vs_vec));
 marginal_pdf_sp = zeros(Ncoeffs,length(vs_vec));
@@ -400,6 +421,9 @@ for idim = 1:size(vs_models,1)
     ind_bin = discretize(vs_models(idim,:),vs_edges);
     marginal = zeros(size(vs_vec));
     for ii = 1:length(ind_bin)
+        if isnan(ind_bin(ii))
+            continue
+        end
         marginal(ind_bin(ii)) = marginal(ind_bin(ii)) + sum(posterior(:,ii));
     end
     marginal_pdf(idim,:) = marginal / sum(marginal); % normalize so sums to 1
@@ -504,12 +528,12 @@ figure(1001); clf;
 for ic = 1:Ncoeffs
     
     subplot(3,3,ic);
-    plot(priors.vs_vec,priors.pdf{ic},'-k','linewidth',2); hold on;
+    plot(priors.vs_vec,priors.pdf_sp{ic},'-k','linewidth',2); hold on;
     plot(vs_vec,bayesian.marginal_pdf_vec_sp(ic,:),'-r','linewidth',1.5); hold on;
     ylim = get(gca,'YLim');
     plot(spcoeffs_true(ic)*[1 1],ylim,'--g','linewidth',1.5);
     title(['Coefficient ',num2str(ic)]);
-    xlim([0 6]);
+    xlim([min(vs_edges) max(vs_edges)]);
     
 end
     
