@@ -32,10 +32,11 @@ nit_plot = 250; % number of iterations after which to plot
 % Define bounds of allowed model space M relative to ref. model.
 % Models outside this space will not be allowed 
 % (this also acts as the min and max of the uniform prior)
-par.dv_M = [-0.25 +0.25];
+% By default, water layer is held at fixed velocity/density
+par.dv_M = [-0.25 +0.25]; % pct of reference model
 
 % Define widths of gaussian perturbations made at each iteration
-par.dv_std = 0.05;
+par.dv_std = 0.05; % km/s
 
 % Scale vp and density with vs
 par.vp_vs = 1.75; % Vp/Vs
