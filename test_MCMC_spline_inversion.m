@@ -44,7 +44,7 @@ par.vp_vs = 1.75; % Vp/Vs
 par.rho_vs = 0.74; % density/Vs
 
 % Spline parameters
-Nspline = 6; % Number of desired splines
+Nspline = 6; % Number of desired splines, evenly spaced from surface (or base of water layer) to zmax
 dz_int = 5; % (km) interpolated layer thicknesses. If too small, surf96 will break...
 zmax = 200; % Maximum depth of starting model
 
