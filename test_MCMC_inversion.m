@@ -208,7 +208,8 @@ while ii < nit_mcmc
     is_in_bounds = is_model_in_bounds(m_j,model_bounds);
 
     % If model is really bad, try a new one
-    if L_j < eps || isnan(L_j) || ~is_in_bounds
+    % if L_j < eps || isnan(L_j) || ~is_in_bounds
+    if isinf(1./L_j) || isnan(L_j) || ~is_in_bounds
         ibad = ibad+1;
         m_j(:,3) = sample_model(1);
         m_j(:,2) = par.vp_vs*m_j(:,3); m_j(m_j(:,3)==0,2)=1.5;
