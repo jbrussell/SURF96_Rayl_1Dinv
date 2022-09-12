@@ -229,6 +229,7 @@ m_j(:,2) = par.vp_vs*m_j(:,3); m_j(m_j(:,3)==0,2)=1.5;
 m_j(:,4) = par.rho_vs*m_j(:,3); m_j(m_j(:,3)==0,4)=1.03;
 ii = 0;
 ibad = 0;
+ii_cooldown = 0;
 tic
 while ii < nit_mcmc
     
@@ -237,6 +238,7 @@ while ii < nit_mcmc
         m_j(:,2) = par.vp_vs*m_j(:,3); m_j(m_j(:,3)==0,2)=1.5;
         m_j(:,4) = par.rho_vs*m_j(:,3); m_j(m_j(:,3)==0,4)=1.03;
 %         ibad = 0;
+        ii_cooldown = 0;
     end
     
     % Previous model
@@ -309,7 +311,7 @@ while ii < nit_mcmc
     % and also the likelihood of the trial model, so misfit increases are
     % more likely accepted early in the MCMC.
 %     tau = 1 + 3 * erfc(ii/500); % denom = 500 means decays over ~1500 iterations (Eilon et al. 2018)
-    tau = 1 + 3 * erfc(ii/(N_cooldown/3)); % denom = 500 means decays over ~1500 iterations
+    tau = 1 + 3 * erfc(ii_cooldown/(N_cooldown/3)); % denom = 500 means decays over ~1500 iterations
     
     % Trial model
     is_in_bounds = 0;
