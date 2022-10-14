@@ -54,7 +54,7 @@ par.dv_M_bottomknot = [-0.05 0.05]; % Control bounds of bottom most knot
 % Define vectors for plotting
 par.min_vs = 0; % minimum velocity
 par.max_vs = 7; % maximum velocity
-par.dvs_vec = 0.01; % spacing between velocities
+par.dvs_vec = 0.025; %0.01; % spacing between velocities
 
 % Define widths of gaussian perturbations made at each iteration
 par.dv_std = 0.05; %0.05; % km/s
@@ -104,7 +104,7 @@ truemod = [dz(:), vp(:), vs(:), rho(:)];
 % GENERATE SYNTHETIC DATASET
 % Calculate dispersion for true model, which will be our "observations"
 % periods = logspace(log10(10),log10(40),10);
-periods = logspace(log10(10),log10(100),15);
+periods = logspace(log10(10),log10(150),15);
 cobs = dispR_surf96(periods,truemod); % "observations"
 cstd = cobs * 0.01; % observation uncertainties
 
@@ -394,6 +394,8 @@ while ii < nit_mcmc
     % Trial model
     is_in_bounds = 0;
     iiloop = 0;
+    iirepeat = 0;
+    is_restart = 0;
     % Get index for type of perturbation to perform
     I_perturbation_type = ceil(rand(1)*2);
     while is_in_bounds == 0
@@ -405,7 +407,14 @@ while ii < nit_mcmc
             % Get new index for type of perturbation to perform
             I_perturbation_type = ceil(rand(1)*2);
             iiloop = 0;
+            iirepeat = iirepeat + 1;
             display(['Giving up on type ',num2str(I_perturbation_type),' ...'])
+        end
+        
+        if iirepeat > 10
+            % If get stuck, just restart from the beginning
+            is_restart = 1;
+            break
         end
         
         if I_perturbation_type == 1 % PERTURB VALUE OF COEFFICIENT
@@ -454,6 +463,10 @@ while ii < nit_mcmc
         is_in_bounds = is_model_in_bounds(m_i,model_bounds);
         
         iiloop = iiloop + 1;
+    end
+    if is_restart
+        ii = ii - 1;
+        continue
     end
     Inoh2o = find(mod_ref.z>=zmin & mod_ref.z<=zmax); Inoh2o = Inoh2o(2:end);
     Ih2o = find(mod_ref.z<=zmin); Ih2o = Ih2o(1:end-1);
