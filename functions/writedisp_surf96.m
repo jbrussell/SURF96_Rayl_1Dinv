@@ -4,6 +4,11 @@
 % wavetype: 'R' for Rayleigh, L for Love; default is R
 % veltype: 'C' for phase v and 'U' for group V; default is C
 %
+% Example:
+% overwrite = 1;
+% nmode = 0;
+% writedisp_surf96(fakedata,'disp_obs.dsp','R','C',overwrite,nmode);
+%
 % Created by Yang Zha 09/28/2012
 %
 function fid=writedisp_surf96(data,filename,varargin)
@@ -18,23 +23,31 @@ if(nargin==2)
 	wavetype='R';
 	veltype='C';
 	overwrite=1;
+    nmode=0;
 elseif(nargin==3)
 	wavetype=varargin{1};
 	veltype='C';
 	overwrite=1;
-elseif(nargin==4);
+    nmode=0;
+elseif(nargin==4)
 	wavetype=varargin{1};
 	veltype=varargin{2};
 	overwrite=1;
-elseif(varargin==5)
+    nmode=0;
+elseif(nargin==5)
 	wavetype=varargin{1};
 	veltype=varargin{2};	
 	overwrite=varargin{3};
+    nmode=0;
+elseif(nargin==6)
+	wavetype=varargin{1};
+	veltype=varargin{2};	
+	overwrite=varargin{3};
+    nmode=varargin{4};
 end
 
 % write data
 %
-nmode=0;
 if(overwrite)
 	fid=fopen(filename,'w'); % open a file and overwrite (DEFAULT)
 else
