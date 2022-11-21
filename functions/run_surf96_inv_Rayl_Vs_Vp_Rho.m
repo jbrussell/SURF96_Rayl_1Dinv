@@ -39,6 +39,7 @@ function [finalmod,cpre,vs_std,vp_std,rho_std] = run_surf96_inv_Rayl_Vs_Vp_Rho(c
 %
 % jbrussell - 11/20/2022
 
+eps_large = 1e9; % large weight to force constraint equation
 
 % Calculate kernels for G matrix using SURF96
 ifnorm = 0; % for plotting only
@@ -90,8 +91,8 @@ H00(ind_dampstart,ind_dampstart) = H00(ind_dampstart,ind_dampstart).*linspace(1,
 h0(ind_dampstart) = h0(ind_dampstart).*linspace(1,1000,length(ind_dampstart))';
 % Kill water layers
 ind_h2o = find(startmod(:,3)==0);
-H00(ind_h2o,ind_h2o) = 1e9;
-h0(ind_h2o) = h0(ind_h2o)*1e9;
+H00(ind_h2o,ind_h2o) = eps_large;
+h0(ind_h2o) = h0(ind_h2o)*eps_large;
 
 % Add Vp and Rho dummy zeros
 H00=[H00 zeros(size(H00)) zeros(size(H00))];
@@ -122,8 +123,8 @@ end
 rho_h2o_vec = 1.03 * ones(length(ind_h2o),1);
 
 % combine all constraints
-H = [H00*eps_H0; J00*eps_J0; F00*eps_F0; VP_VS_mat*eps_vpvs0; RHO_VS_mat*eps_rhovs0; VP_h2o_mat*1e9; RHO_h2o_mat*1e9];
-h = [h0*eps_H0; j0*eps_J0; f0*eps_F0; vp_vs_vec*eps_vpvs0; rho_vs_vec*eps_rhovs0; vp_h2o_vec*1e9; rho_h2o_vec*1e9];
+H = [H00*eps_H0; J00*eps_J0; F00*eps_F0; VP_VS_mat*eps_vpvs0; RHO_VS_mat*eps_rhovs0; VP_h2o_mat*eps_large; RHO_h2o_mat*eps_large];
+h = [h0*eps_H0; j0*eps_J0; f0*eps_F0; vp_vs_vec*eps_vpvs0; rho_vs_vec*eps_rhovs0; vp_h2o_vec*eps_large; rho_h2o_vec*eps_large];
 
 % Data vector
 cstart = dispR_surf96(periods,startmod,nmode); % "predictions";
