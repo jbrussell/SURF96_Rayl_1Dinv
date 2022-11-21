@@ -91,7 +91,7 @@ H00(ind_dampstart,ind_dampstart) = H00(ind_dampstart,ind_dampstart).*linspace(1,
 h0(ind_dampstart) = h0(ind_dampstart).*linspace(1,1000,length(ind_dampstart))';
 % Kill water layers
 ind_h2o = find(startmod(:,3)==0);
-H00(ind_h2o,ind_h2o) = eps_large;
+H00(ind_h2o,ind_h2o) = H00(ind_h2o,ind_h2o)*eps_large;
 h0(ind_h2o) = h0(ind_h2o)*eps_large;
 
 % Add Vp and Rho dummy zeros
