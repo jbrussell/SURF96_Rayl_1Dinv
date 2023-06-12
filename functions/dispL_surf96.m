@@ -3,6 +3,7 @@
 % 	vec_T: period 
 % 	data: [phv];
 %   nmode: 0=fund. 1=1st, ... etc. (OPTIONAL, defaults to fund.)
+%   disp_type: 'C'=phase veloc. 'U'=group veloc (OPTIONAL, defaults to C)
 %
 % jbrussell 11/20/2022: Update to allow calculation of overtone data
 % 
@@ -19,9 +20,17 @@ system('rm start.mod');
 system('rm temp.dsp');
 
 if nargin==2
-    nmode = 0; % default, fundamental model
+    nmode = 0; % default, fundamental mode
+    disp_type = 'C'; % default, phase velocity
 elseif nargin==3
 	nmode = varargin{1};
+    disp_type = 'C'; % default, phase velocity
+elseif nargin==4
+    nmode = varargin{1};
+    disp_type = upper(varargin{2});
+    if ~(strcmp(disp_type,'C') || strcmp(disp_type,'U'))
+        error('disp_type must be C or U');
+    end
 end
 
 % make surf96 par file
@@ -32,7 +41,7 @@ datatemp(:,1) = vec_T(:);
 datatemp(:,2) = 3;
 datatemp(:,3)  =0.1;
 
-writedisp_surf96(datatemp,'disp_obs.dsp','L','C',1,nmode); % write temp data into dispersion file 
+writedisp_surf96(datatemp,'disp_obs.dsp','L',disp_type,1,nmode); % write temp data into dispersion file 
 writemod_surf96(model,'start.mod');
 
 % run surf96 
