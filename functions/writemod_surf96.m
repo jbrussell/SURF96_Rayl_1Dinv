@@ -2,19 +2,31 @@
 % 
 % created by Yang Zha 09/28/2012
 % modified 10/17/2012 to include density in model
+% modified 6/12/2023 to include Qp and Qs in model
 % 
 % model is nlayer*4 matrix [H Vp Vs Density]
 % 		model(:,1): H(KM)
 %		model(:,2): VP(KM/S)
 %		model(:,3): VS(KM/S)
-%		model(:,4): DENSITY(g/cm^3)		
+%		model(:,4): DENSITY(g/cm^3)	
+% ---------- optional ----------
+%       model(:,5): QP (optional)
+%       model(:,6): QS (optional)
+%
 function fid=writemod_surf96(model,filename)
 %
 % set up constant parameters
 %rho=3.0; % constant density
 %rho_water = 1.0; % water density
-QP=1000;
-QS=200;
+if size(model,2) == 4
+    QP=1000*ones(size(model,1));
+    QS=200*ones(size(model,1));
+elseif size(model,2) == 6
+    QP = model(:,5);
+    QS = model(:,6);
+else 
+    error('Model must have either 4 or 6 columns');
+end
 fid = fopen(filename,'w');
 
 	fprintf(fid,'MODEL.01\n');
@@ -36,11 +48,11 @@ fid = fopen(filename,'w');
 		fprintf(fid,'     %7.4f',model(i,2));	% Vp
 		fprintf(fid,'     %7.4f',model(i,3));	% Vs
 		fprintf(fid,'     %7.4f',model(i,4));	% density
-		fprintf(fid,'  	  %7.4f',QP); % QP	
+		fprintf(fid,'  	  %7.4f',QP(i)); % QP	
 		if(model(i,3)<=0.01)
 			fprintf(fid,'  	  %7.4f',0); % QS
 		else
-			fprintf(fid,'  	  %7.4f',QS); % QS
+			fprintf(fid,'  	  %7.4f',QS(i)); % QS
         end
         % Q = Q ( f / f_refP )^eta
 		fprintf(fid,'     0.00'); %ETAP
