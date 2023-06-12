@@ -49,11 +49,11 @@ fid = fopen(filename,'w');
 		fprintf(fid,'     %7.4f',model(i,3));	% Vs
 		fprintf(fid,'     %7.4f',model(i,4));	% density
 		fprintf(fid,'  	  %7.4f',QP(i)); % QP	
-		if(model(i,3)<=0.01)
-			fprintf(fid,'  	  %7.4f',0); % QS
-		else
+		% if(model(i,3)<=0.01)
+		% 	fprintf(fid,'  	  %7.4f',0); % QS
+		% else
 			fprintf(fid,'  	  %7.4f',QS(i)); % QS
-        end
+        % end
         % Q = Q ( f / f_refP )^eta
 		fprintf(fid,'     0.00'); %ETAP
 		fprintf(fid,'     0.00');%ETAS
