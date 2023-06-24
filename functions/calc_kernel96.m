@@ -2,7 +2,7 @@ function [dcdvs, dcdvp, dudvs, dudvp, z_mid, dcdrho, dudrho] = calc_kernel96(mod
 % calculate surface wave sensitivity kernel using srfker96 command from CPS  package :
 %
 % [dc/dvs dc/dvp du/dvs du/dvp] = calc_kernel96(model, period, wavetype, ifNorm, ifplot);
-% model: surf96 format model: [thickness, vo,vs,rho];
+% model: surf96 format model: [thickness, vp, vs, rho];
 % period : in seconds
 % wavetype: 'L', 'R' or 'J' (joint);
 % ifnorm: 1: normalize kernel by layer thickness; 0: no normalization

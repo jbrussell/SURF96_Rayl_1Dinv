@@ -1,8 +1,8 @@
 function [kernel, dispersion] = calc_anelastic_kernel96(model, vec_T, wavetype, ifnorm, ifplot, varargin)
 % calculate surface wave sensitivity kernel using srfker96 command from CPS  package :
 %
-% [dc/dvs dc/dvp du/dvs du/dvp] = calc_kernel96(model, period, wavetype, ifNorm, ifplot);
-% model: surf96 format model: [thickness, vo,vs,rho];
+% [kernel, dispersion] = calc_kernel96(model, period, wavetype, ifNorm, ifplot);
+% model: surf96 format model: [thickness, vp, vs, rho, Qp, Qs];
 % period : in seconds
 % wavetype: 'L', 'R' or 'J' (joint);
 % ifnorm: 1: normalize kernel by layer thickness; 0: no normalization
@@ -30,7 +30,9 @@ function [kernel, dispersion] = calc_anelastic_kernel96(model, vec_T, wavetype, 
 % Also update to allow for overtone kernels to be output
 % nmode=0 for fund. mode; nmode=1 for 1st overtone, etc...
 %
-% jbrussell 6/12/2023: Read anelastic kernels
+% jbrussell 6/12/2023: Significant rewrite to include anelastic kernels. This version
+% reads in a new structure called "dispersion" that includes attenuation coefficient
+% gamma as well as phv and grv with the influence of physical dispersion.
 %
 
 % timeoutstr = 'ulimit -t 20; '; % timeout after 20 seconds of CPU time
@@ -76,7 +78,7 @@ for ip = 1:Nper
     fakedata = [period,3, 0.01]; % fake velocity entry for use by srfker96
 
     if(wavetype=='J') % if wavetype is joint L and R, write both to dispersion file, otherwise only write one
-
+        error('Has not been updated to include Joint data')
         writedisp_surf96(fakedata,'disp_obs.dsp','L','U',1,nmode);
         writedisp_surf96(fakedata,'disp_obs.dsp','R','U',0,nmode);
     else
@@ -127,12 +129,14 @@ for ip = 1:Nper
         t=['Layer sensitivity kernel',num2str(period),' S'];
 
     end
+    % Set inf values to --> 0
     for ii = 1:length(flds_kern)
         Iinf = isinf(kernel.(flds_kern{ii})(:,ip));
         kernel.(flds_kern{ii})(Iinf,ip) = 0;
     end
     
     % Convert gamma(Qs,Qp) kernels to --> Q(Qs,Qp) kernels
+    % gamma = omega / 2 / grv / Q
     omega = 2 * pi ./ dispersion.period(ip);
     kernel.dQdQs(:,ip) = (2 .* dispersion.grv(ip) ./ omega) .* kernel.dgdQs(:,ip);
     kernel.dQdQp(:,ip) = (2 .* dispersion.grv(ip) ./ omega) .* kernel.dgdQp(:,ip);
@@ -147,7 +151,6 @@ for ip = 1:Nper
     kernel.dgdQkap(:,ip) = kernel.dgdQp(:,ip) .* (1 - 4/3 .* vs.^2 ./ vp.^2);
      
     % Convert gamma(Qmu, Qkappa) --> Q(Qmu, Qkappa) kernel
-    % gamma = omega / 2 / grv / Q
     omega = 2 * pi ./ dispersion.period(ip);
     kernel.dQdQmu(:,ip) = (2 .* dispersion.grv(ip) ./ omega) .* kernel.dgdQmu(:,ip);
     kernel.dQdQkap(:,ip) = (2 .* dispersion.grv(ip) ./ omega) .* kernel.dgdQkap(:,ip);

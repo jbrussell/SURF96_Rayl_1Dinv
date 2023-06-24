@@ -1,10 +1,11 @@
 % read surface wave sensitivity kernels wrote by srfker96 command
-%	kernel=[dcdvs(:) dcdvp(:) dudvs(:) dudvp(:) dcdrho(:) dudrho(:)];
+%   kernel -> [dcdvp dcdvs dudvp dudvs dcdrho dudrho dcdQp dcdQs dudQp dudQs dgdQp dgdQs]
 %
 % jbrussell 11/20/2022: Include density kernels in addition to Vp and Vs.
 % Also, load kernels for all available mode branches.
 % 
-% jbrussell 6/12/2023: Read anelastic kernels
+% jbrussell 6/12/2023: Include anelastic kernels (has not been updated for Love waves!)
+%
 function [kern, dispersion] = read_anelastic_kernel96(filename,wavetype,varargin)
 
 if nargin==2
@@ -57,6 +58,8 @@ if(fid>=0)
 		if ~isempty(temp) 
 			thick(il) = temp(2);% thickness H(i)
 			if(wavetype=='L')
+				error('HAS NOT BEEN UPDATED FOR LOVE WAVES YET')
+
 				kern.dcdvs(il) = temp(3);% 
 				kern.dudvs(il)  = temp(4);% 
 	
