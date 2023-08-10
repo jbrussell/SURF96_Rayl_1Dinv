@@ -47,7 +47,13 @@ fclose(fid);
 
 % read eigenfunctions from temp file
 eig=read_eig96(['S',wavetype,'DER.TXT'],wavetype,nmode);
-eig.dz = model(:,1);
+
+% Get midpoint of layer
+vec_h=model(:,1);
+z1=cumsum(vec_h);z1=z1(:);
+z2=[0;z1(1:end-1)];
+z_mid=(z1+z2)/2;
+eig.z = z_mid;
 
 delete periods.txt start.mod sdisp96.dat sdisp96.ray sdisp96.lov sregn96.der slegn96.der sregn96.egn slegn96.egn SREGNE.PLT SLEGNE.PLT SREGN.ASC SLEGN.ASC SRDER.PLT SLDER.PLT SRDER.TXT SLDER.TXT
 
