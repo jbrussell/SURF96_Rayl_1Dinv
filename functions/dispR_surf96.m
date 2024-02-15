@@ -9,23 +9,33 @@
 % 
 function phv = dispR_surf96(vec_T,model,varargin)
 
-if nargin==2
-    nmode = 0; % default, fundamental mode
-    disp_type = 'C'; % default, phase velocity
-elseif nargin==3
-    nmode = varargin{1};
-    disp_type = 'C'; % default, phase velocity
-elseif nargin==4
-    nmode = varargin{1};
-    disp_type = upper(varargin{2});
-    if ~(strcmp(disp_type,'C') || strcmp(disp_type,'U'))
-        error('disp_type must be C or U');
+    if nargin==2
+        nmode = 0; % default, fundamental mode
+        disp_type = 'C'; % default, phase velocity
+        fref = 1; % default, reference frequency
+    elseif nargin==3
+        nmode = varargin{1};
+        disp_type = 'C'; % default, phase velocity
+        fref = 1; % default, reference frequency
+    elseif nargin==4
+        nmode = varargin{1};
+        disp_type = upper(varargin{2});
+        if ~(strcmp(disp_type,'C') || strcmp(disp_type,'U'))
+            error('disp_type must be C or U');
+        end
+        fref = 1; % default, reference frequency
+    elseif nargin==5
+        nmode = varargin{1};
+        disp_type = upper(varargin{2});
+        if ~(strcmp(disp_type,'C') || strcmp(disp_type,'U'))
+            error('disp_type must be C or U');
+        end
+        fref = varargin{3};
     end
-end
 
 if size(model,2)>4 % if Qp and Qs proivded, calculate the Q-corrected phase velocity
 
-    disper = calc_amplification_ellipticity_gamma(vec_T,model,'R',nmode);
+    disper = calc_amplification_ellipticity_gamma(vec_T,model,'R',nmode,fref);
     if strcmp(disp_type,'C')
         phv = disper.phv;
     elseif strcmp(disp_type,'U')

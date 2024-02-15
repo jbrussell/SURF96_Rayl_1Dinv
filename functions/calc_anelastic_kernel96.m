@@ -64,8 +64,13 @@ kernel.dQdQkap=nan*ones(nlayer,Nper);
 
 if nargin == 5
     nmode = 0; % default fundamental mode
+    fref = 1; % default reference frequency
 elseif nargin == 6
     nmode = varargin{1};
+    fref = 1; % default reference frequency
+elseif nargin == 7
+    nmode = varargin{1};
+    fref = varargin{2};
 end
 
 for ip = 1:Nper
@@ -73,7 +78,7 @@ for ip = 1:Nper
     %% ================1. MAKE PARAMETER FILES====================
     make_par_surf96(wavetype,nmode); % make a control file for surf96
     % ================2. make model file and dispersion file ================
-    writemod_surf96(model,'start.mod'); % write model to file
+    writemod_surf96(model,'start.mod',fref); % write model to file
 
     fakedata = [period,3, 0.01]; % fake velocity entry for use by srfker96
 

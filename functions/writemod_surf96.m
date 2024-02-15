@@ -13,7 +13,25 @@
 %       model(:,5): QP (optional)
 %       model(:,6): QS (optional)
 %
-function fid=writemod_surf96(model,filename)
+function fid=writemod_surf96(model,filename,varargin)
+%
+%
+if nargin==2
+    FREFP= 1; % default, reference frequency
+    FREFS= 1; % default, reference frequency
+    ETAP= 0; % default, eta
+    ETAS= 0; % default, eta
+elseif nargin==3
+    FREFP = varargin{1};
+    FREFS = varargin{1};
+    ETAP= 0; % default, eta
+    ETAS= 0; % default, eta
+elseif nargin==4
+    FREFP = varargin{1};
+    FREFS = varargin{1};
+    ETAP= varargin{2};
+    ETAS= varargin{2}; 
+end
 %
 % set up constant parameters
 %rho=3.0; % constant density
@@ -55,10 +73,10 @@ fid = fopen(filename,'w');
 			fprintf(fid,'  	  %7.4f',QS(i)); % QS
         end
         % Q = Q ( f / f_refP )^eta
-		fprintf(fid,'     0.00'); %ETAP
-		fprintf(fid,'     0.00');%ETAS
-		fprintf(fid,'     1.00'); % FREFP
-		fprintf(fid,'     1.00    '); % FREFS
+		fprintf(fid,'     %7.4f',ETAP); % ETAP
+		fprintf(fid,'     %7.4f',ETAS); % ETAS
+		fprintf(fid,'     %7.4f',FREFP); % FREFP
+		fprintf(fid,'     %7.4f    ',FREFS); % FREFS
 		fprintf(fid,'\n');
 	end
 
