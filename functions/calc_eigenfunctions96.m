@@ -19,14 +19,19 @@ system('rm start.mod');
 
 if nargin==3
     nmode = 0; % default, fundamental mode
+    fref = 1; % default, reference freq
 elseif nargin==4
 	nmode = varargin{1};
+    fref = 1; % default, reference freq
+elseif nargin==5
+    nmode = varargin{1};
+    fref = varargin{2};
 end
 
 nmodes = nmode + 1; % number of total modes to calculate
 
 % Make model file
-writemod_surf96(model,'start.mod');
+writemod_surf96(model,'start.mod',fref);
 
 % run sprep96 to generate dispersion control file (outputs sdisp96.dat)
 fid = fopen('periods.txt','w');
