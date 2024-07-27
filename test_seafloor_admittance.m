@@ -29,7 +29,7 @@ vec_T = [6, 8, 10, 20]; % s
 vec_T_adm = linspace(5,50,100);
 
 % Sediment Vs to loop over
-vs_sed_vec = [0.28 0.48 0.98]; % km/s
+vs_sed_vec = [0.48 0.98]; % km/s
 
 figure(99); clf;
 set(gcf,'position',[70          81        1526         842]);
