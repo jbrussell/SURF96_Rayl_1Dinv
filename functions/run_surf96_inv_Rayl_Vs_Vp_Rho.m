@@ -1,4 +1,4 @@
-function [finalmod,cpre,vs_std,vp_std,rho_std] = run_surf96_inv_Rayl_Vs_Vp_Rho(cobs,cstd,periods,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,z_dampbot,nit,nit_recalc_c,vp_vs,rho_vs,nmode)
+function [finalmod,cpre,vs_std,vp_std,rho_std] = run_surf96_inv_Rayl_Vs_Vp_Rho(cobs,cstd,periods,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,z_dampbot,nit,nit_recalc_c,vp_vs,rho_vs,nmode,varargin)
 % Do linearized inversion of Rayleigh wave phase velocities for Vs, Vp, 
 % and Density (rho) using surf96 to generate the kernels and to calculate 
 % phase velocity.
@@ -39,12 +39,18 @@ function [finalmod,cpre,vs_std,vp_std,rho_std] = run_surf96_inv_Rayl_Vs_Vp_Rho(c
 %
 % jbrussell - 11/20/2022
 
+if isempty(varargin)
+    fref = 1; % Default reference frequency
+elseif length(varargin)==1
+    fref = varargin{1};
+end
+
 eps_large = 1e9; % large weight to force constraint equation
 
 % Calculate kernels for G matrix using SURF96
 ifnorm = 0; % for plotting only
 ifplot = 0;
-[dcdvs, dcdvp, dudvs, dudvp, zkern, dcdrho, dudrho] = calc_kernel96(startmod, periods, 'R', ifnorm, ifplot,nmode);
+[dcdvs, dcdvp, dudvs, dudvp, zkern, dcdrho, dudrho] = calc_kernel96(startmod, periods, 'R', ifnorm, ifplot,nmode,fref);
 G = [dcdvs' dcdvp' dcdrho'];
 
 % Data weighting
@@ -127,7 +133,7 @@ H = [H00*eps_H0; J00*eps_J0; F00*eps_F0; VP_VS_mat*eps_vpvs0; RHO_VS_mat*eps_rho
 h = [h0*eps_H0; j0*eps_J0; f0*eps_F0; vp_vs_vec*eps_vpvs0; rho_vs_vec*eps_rhovs0; vp_h2o_vec*eps_large; rho_h2o_vec*eps_large];
 
 % Data vector
-cstart = dispR_surf96(periods,startmod,nmode); % "predictions";
+cstart = dispR_surf96(periods,startmod,nmode,'C',fref); % "predictions";
 cpre = cstart;
 
 % Least squares inversion
@@ -176,12 +182,12 @@ for ii = 1:nit
     rho_std = m_std(2*nlayer+1:3*nlayer);
     
     if mod(ii,nit_recalc_c)==0
-        cpre = dispR_surf96(periods,premod,nmode);
+        cpre = dispR_surf96(periods,premod,nmode,'C',fref);
         dc = cobs - cpre;
         
         ifnorm = 0; % for plotting only
         ifplot = 0;
-        [dcdvs, dcdvp, dudvs, dudvp, zkern, dcdrho, dudrho] = calc_kernel96(startmod, periods, 'R', ifnorm, ifplot,nmode);
+        [dcdvs, dcdvp, dudvs, dudvp, zkern, dcdrho, dudrho] = calc_kernel96(startmod, periods, 'R', ifnorm, ifplot,nmode,fref);
         G = [dcdvs' dcdvp' dcdrho'];
     end
     
@@ -217,7 +223,7 @@ for ii = 1:nit
 end
 
 finalmod = premod;
-cpre = dispR_surf96(periods,finalmod,nmode);
+cpre = dispR_surf96(periods,finalmod,nmode,'C',fref);
 
 end
 
