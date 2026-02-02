@@ -32,6 +32,8 @@ function phv = dispR_surf96(vec_T,model,varargin)
         end
         fref = varargin{3};
     end
+vec_T = vec_T(:);
+n_requested = length (vec_T)
 
 if size(model,2)>4 % if Qp and Qs proivded, calculate the Q-corrected phase velocity
 
@@ -72,13 +74,30 @@ else % Otherwise, calculate non-Q-corrected phase velocity
     data=readdisp_surf96('temp.dsp');
 
     if(~isempty(data))
-        phv=data(:,2);
+        T_returned = data(:,1);
+        V_returned = data(:,2);
+
+        if length(T_returned)== n_requested && max(abs(T_returned - vec_T)) < 0.01
+            phv = v_returned
+        else
+            phv = interp1(T_returned, v_returned, vec_T, 'linear', NaN);
+        end
     else
-        phv=[];
+        phv = NaN(n_requested, 1);
     end
-    %
+    
     system('surf96 39'); % clean up
+
+    phv = phv(:);
+            
+        %phv=data(:,2);
+    %else
+        %phv=[];
+    
+    %
+    %system('surf96 39'); % clean up
 end
+
 
 end
 
