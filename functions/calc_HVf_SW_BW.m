@@ -1,4 +1,4 @@
-function [freq,hvsr] = calc_HVf_SW_BW(model, nf,fmin,fmax,nmr,nml,nks)
+function [freq,hvsr,vel] = calc_HVf_SW_BW(model, nf,fmin,fmax,nmr,nml,nks)
 % Calculate HVSR considering surface waves and body waves
 %
 % Usage: HV [OPTIONS]
@@ -75,13 +75,53 @@ dat = reshape(dat,2,length(dat)/2)';
 freq = dat(:,1);
 hvsr = dat(:,2);
 
+% Initialize Rayleigh and Love Group Velocities
+Rph=[];
+Lph=[];
+Rgr=[];
+Lgr=[];
+
 % Load Rayleigh and Love Phase velocity
+if exist('Rph.dat')
+    [Rph] = load_v('Rph.dat');
+end
+if exist('Lph.dat')
+    [Lph] = load_v('Lph.dat');
+end
 
 % Load Rayleigh and Love Group velocity
+if exist('Rgr.dat')
+    [Rgr] = load_v('Rgr.dat');
+end
+if exist('Lgr.dat')
+    [Lgr] = load_v('Lgr.dat');
+end
+
+vel.Rph = Rph;
+vel.Lph = Lph;
+vel.Rgr = Rgr;
+vel.Lgr = Lgr;
 
 
 delete HV.dat Lgr.dat Lph.dat model.txt Rgr.dat Rph.dat
 
+end
+
+% Load Velocity
+function [v] = load_v(fname)
+    fid = fopen(fname);
+    row = fgetl(fid);
+    vals = str2num(row);
+    Nf = vals(1);
+    Nmode = vals(2);
+    
+    row = fgetl(fid);
+    s = str2num(row);
+    s = reshape(s,Nf,Nmode);
+    v = 1./s / 1000; % km/s
+    v(isinf(v)) = nan;
+    
+    fclose(fid);
 end
 
 
