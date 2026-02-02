@@ -33,6 +33,9 @@ elseif nargin==4
     end
 end
 
+vec_T = vec_T(:);
+n_requested = length(vec_T);
+
 % make surf96 par file
 make_par_surf96('L',nmode);
 
@@ -51,12 +54,22 @@ writemod_surf96(model,'start.mod');
 data=readdisp_surf96('temp.dsp');
 
 if(~isempty(data))
-	phv=data(:,2);
+	% phv=data(:,2);
+    T_returned = data(:,1);
+    v_returned = data(:,2);
+
+    if length(T_returned)== n_requested && max(abs(T_returned - vec_T)) < 0.01
+        phv = v_returned;
+    else
+        phv = interp1(T_returned, v_returned, vec_T, 'linear', NaN);
+    end
 else
 	phv=[];
 end
 %
 system('surf96 39'); % clean up
+
+phv = phv(:);
 
 end
 
