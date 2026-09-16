@@ -40,6 +40,22 @@ qmu_val = qmu_raw(:,1); qmu_z = qmu_raw(:,2);
 [vs_z, I] = sort(vs_z); vs_val = vs_val(I);
 [qmu_z, I] = sort(qmu_z); qmu_val = qmu_val(I);
 
+% Both profiles repeat the same depth value at sharp step transitions
+% (e.g. near the LAB) to draw a near-vertical jump. interp1 requires
+% strictly increasing grid points, so nudge repeated depths apart by a
+% negligible amount (1 mm) to preserve the step while keeping depths unique.
+dz_tiny = 1e-6; % km
+for i = 2:length(vs_z)
+    if vs_z(i) <= vs_z(i-1)
+        vs_z(i) = vs_z(i-1) + dz_tiny;
+    end
+end
+for i = 2:length(qmu_z)
+    if qmu_z(i) <= qmu_z(i-1)
+        qmu_z(i) = qmu_z(i-1) + dz_tiny;
+    end
+end
+
 %% Plot the input Vsv and Qmu profiles
 figure(1); clf;
 set(gcf,'position',[100 100 800 700]);
