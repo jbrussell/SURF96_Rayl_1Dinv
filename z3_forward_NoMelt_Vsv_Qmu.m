@@ -77,7 +77,23 @@ set(gca,'FontSize',14,'linewidth',1.5,'ydir','reverse');
 
 % Merge the two depth grids and interpolate both profiles onto the union
 z_common = unique([vs_z(:); qmu_z(:)]);
-z_common = z_common([true; diff(z_common) > 1e-3]); % drop near-duplicate depths
+
+% Enforce a minimum node spacing so z_common doesn't inherit arbitrarily
+% thin layers from the input sampling (or the tie-break nudge above):
+% greedily keep a depth only once it is dz_min beyond the last kept
+% depth, always keeping the deepest point (defines the model base).
+dz_min = 5; % km
+keep = true(size(z_common));
+z_last = z_common(1);
+for i = 2:length(z_common)
+    if z_common(i) - z_last >= dz_min
+        z_last = z_common(i);
+    else
+        keep(i) = false;
+    end
+end
+keep(end) = true;
+z_common = z_common(keep);
 
 vs = interp1(vs_z, vs_val, z_common, 'linear');
 qs = interp1(qmu_z, qmu_val, z_common, 'linear'); % Qs == Qmu
