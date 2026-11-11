@@ -5,18 +5,17 @@
 % an isotropic model. For this model the TI isotropic-equivalent kernels
 %     dc/dVs = dc/dVsv + dc/dVsh,   dc/dVp = dc/dVpv + dc/dVph
 % (and the group-velocity equivalents) should match the isotropic kernels.
-% The thickness kernels dc/dh, dU/dh are also compared (calc_kernel96
-% returns these as its 6th and 7th outputs, labelled dcdrho and dudrho).
+% The density kernels (calc_kernel96 outputs 6-7) and the srfker96
+% thickness kernels dc/dh, dU/dh (outputs 8-9) are also compared.
 %
-%   Expected differences: for SPHERICAL EARTH models the TI kernels differ
-%   from the isotropic srfker96 kernels by a depth-dependent factor of
-%   ~a/(a-z) (about 2% at 150 km depth): tregn96 applies the
-%   earth-flattening chain rule dv_flat/dv_sph to the velocity kernels and
-%   srfker96 does not. Part 2 shows that the TI kernels are the ones
-%   consistent with finite differences of the spherical-earth phase
-%   velocity. For FLAT EARTH models the kernels agree to ~1e-4 to 1e-3
-%   (the precision of the srfker96 text output). The tolerance below allows
-%   for the spherical-earth difference.
+%   Expected differences: ~1e-4 to 1e-3, set by the 4 significant figures
+%   of the srfker96 text output and, for Rayleigh waves, by the slightly
+%   different earth flattening of the CPS TI programs (see
+%   benchmark_TI_dispersion.m). Before November 2026 calc_kernel96 did not
+%   apply the spherical-earth mapping to the srfker96 phase-velocity
+%   kernels, which then differed from the TI kernels by up to ~2.4% at
+%   150 km depth, and its outputs 6-7 were srfker96's dc/dh and dU/dh
+%   rather than density kernels.
 %
 % Part 2: validates every TI kernel (Vpv, Vph, Vsv, Vsh, eta, rho) against
 % centered finite differences of dispR_surf96_TI / dispL_surf96_TI for a
@@ -34,22 +33,31 @@ fid = fopen(logfile,'a'); fprintf(fid,'\n===== benchmark_TI_kernels =====\n'); f
 model = benchmark_model_TI();      % isotropic [H Vp Vs rho]
 model_TI = convert_iso2TI(model);  % TI [H Vpv Vsv rho Vph Vsh eta]
 vec_T = [5 10 20 50];
-tol_iso = 3e-2;  % peak-normalized tolerance, iso vs TI (spherical earth)
+tol_iso = 1e-2;  % peak-normalized tolerance, iso vs TI
+tol_vp  = 2e-2;  % same, for the Rayleigh Vp kernels (see below)
+% Rayleigh-wave Vp-type kernels are compared with a looser tolerance
+% (tol_vp): tdisp96/tregn96 do not apply the earth-flattening transform to
+% the modulus F (see README_TI.md), which is what a Vp perturbation
+% changes, so for SPHERICAL EARTH models the TI dc/dVp differs from the
+% isotropic one by up to ~1.5% at long periods. (The corrected isotropic
+% dc/dVp agrees with the sregn96 -DER kernel to < 1e-3.)
 tol_fd  = 1e-2;  % kernel prediction vs finite difference, relative to the largest change over periods
 
 %% Part 1: isotropic vs TI kernels
 wavetypes = {'R','L'};
 for iw = 1:2
     wt = wavetypes{iw};
-    [dcdvs, dcdvp, dudvs, dudvp, z_mid, dcdh_iso, dudh_iso] = calc_kernel96(model, vec_T, wt, 0, 0);
+    [dcdvs, dcdvp, dudvs, dudvp, z_mid, dcdrho_iso, dudrho_iso, dcdh_iso, dudh_iso] = calc_kernel96(model, vec_T, wt, 0, 0);
     [kernel, dispersion] = calc_kernel96_TI(model_TI, vec_T, wt, 0, 0);
 
     bench_compare_TI([wt,' dc/dVs  (dcdvsv+dcdvsh)'], kernel.dcdvs, dcdvs, tol_iso, 'peak', logfile);
     bench_compare_TI([wt,' dU/dVs  (dudvsv+dudvsh)'], kernel.dudvs, dudvs, tol_iso, 'peak', logfile);
     if strcmp(wt,'R')
-        bench_compare_TI([wt,' dc/dVp  (dcdvpv+dcdvph)'], kernel.dcdvp, dcdvp, tol_iso, 'peak', logfile);
-        bench_compare_TI([wt,' dU/dVp  (dudvpv+dudvph)'], kernel.dudvp, dudvp, tol_iso, 'peak', logfile);
+        bench_compare_TI([wt,' dc/dVp  (dcdvpv+dcdvph)'], kernel.dcdvp, dcdvp, tol_vp, 'peak', logfile);
+        bench_compare_TI([wt,' dU/dVp  (dudvpv+dudvph)'], kernel.dudvp, dudvp, tol_vp, 'peak', logfile);
     end
+    bench_compare_TI([wt,' dc/drho'], kernel.dcdrho, dcdrho_iso, tol_iso, 'peak', logfile);
+    bench_compare_TI([wt,' dU/drho'], kernel.dudrho, dudrho_iso, tol_iso, 'peak', logfile);
     bench_compare_TI([wt,' dc/dh'], kernel.dcdh, dcdh_iso, tol_iso, 'peak', logfile);
     bench_compare_TI([wt,' dU/dh'], kernel.dudh, dudh_iso, tol_iso, 'peak', logfile);
 

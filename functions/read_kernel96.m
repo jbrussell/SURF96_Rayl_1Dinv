@@ -1,5 +1,11 @@
 % read surface wave sensitivity kernels wrote by srfker96 command
-%	kernel=[dcdvs(:) dcdvp(:) dudvs(:) dudvp(:) dcdrho(:) dudrho(:)];
+%	kernel=[dcdvs(:) dcdvp(:) dudvs(:) dudvp(:) dcdh(:) dudh(:)];
+%
+% Note: srfker96 does not output density kernels. Columns 5-6 are the
+% srfker96 dc/dh and dU/dh (layer thickness) kernels (jbrussell 11/2026:
+% previously mislabeled dcdrho/dudrho). The phase-velocity kernels are
+% returned as output by srfker96, i.e. without the spherical-earth mapping
+% that calc_kernel96.m applies.
 %
 % jbrussell 11/20/2022: Include density kernels in addition to Vp and Vs.
 % Also, load kernels for all available mode branches.
@@ -17,7 +23,7 @@ if(fid>=0)
 	it = 0;
 	while 1
     	stemp=fgetl(fid);
-	    if (strmatch('Elastic',stemp))    % find where Elastic Love wave kernel begins
+	    if (ischar(stemp) && strncmp(stemp,'Elastic',7))    % find where Elastic Love wave kernel begins
         	C = textscan(stemp,'%s%s wave: Period=%f Mode =%d C=%f U=%f' );
             elastic_anelastic = C{1};
             rayl_love = C{2};
@@ -54,8 +60,8 @@ if(fid>=0)
 				dcdvp(il)  = 0;% 
 				dudvp(il)  = 0;% 
                 
-                dcdrho(il)  = temp(5);% 
-				dudrho(il)  = temp(6);% 
+                dcdh(il)  = temp(5);% dc/dh
+				dudh(il)  = temp(6);% dU/dh
 				
 			elseif(wavetype=='R')
 				dcdvp(il)  = temp(3);% 
@@ -64,8 +70,8 @@ if(fid>=0)
 				dudvp(il) = temp(5);% 
 				dudvs(il) = temp(6);% 
                 
-                dcdrho(il)  = temp(7);% 
-				dudrho(il)  = temp(8);% 
+                dcdh(il)  = temp(7);% dc/dh
+				dudh(il)  = temp(8);% dU/dh
 			end
 			
 			il=il+1;
@@ -73,7 +79,7 @@ if(fid>=0)
 			break
 		end
 	end
-	kernel=[dcdvs(:) dcdvp(:) dudvs(:) dudvp(:) dcdrho(:) dudrho(:)];
+	kernel=[dcdvs(:) dcdvp(:) dudvs(:) dudvp(:) dcdh(:) dudh(:)];
 	fclose(fid);
 else
 	error([filename,' does not exist']);% return empty data if file is empty 

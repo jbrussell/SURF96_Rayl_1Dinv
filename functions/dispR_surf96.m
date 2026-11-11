@@ -38,11 +38,23 @@ n_requested = length(vec_T);
 
 if size(model,2)>4 % if Qp and Qs proivded, calculate the Q-corrected phase velocity
 
+    % jbrussell 11/2026: return the group velocity for disp_type 'U'
+    % (previously the phase velocity was returned), aligned with vec_T
+    % (NaN where the mode does not exist). Note that, as in CPS, the group
+    % velocity is not corrected for Q.
     disper = calc_amplification_ellipticity_gamma(vec_T,model,'R',nmode,fref);
     if strcmp(disp_type,'C')
-        phv = disper.phv;
+        v_returned = disper.phv(:);
     elseif strcmp(disp_type,'U')
-        grv = disper.grv;
+        v_returned = disper.grv(:);
+    end
+    T_returned = disper.period(:);
+    phv = NaN(n_requested, 1);
+    for ii = 1:n_requested
+        [dT, I] = min(abs(T_returned - vec_T(ii)));
+        if ~isempty(I) && dT <= max(0.01, 1e-3*vec_T(ii))
+            phv(ii) = v_returned(I);
+        end
     end
 
 else % Otherwise, calculate non-Q-corrected phase velocity

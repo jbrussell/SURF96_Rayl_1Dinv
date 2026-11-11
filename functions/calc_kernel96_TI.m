@@ -43,10 +43,10 @@ function [kernel, dispersion] = calc_kernel96_TI(model, vec_T, wavetype, ifnorm,
 %    where d/dw is evaluated by centered finite difference using two
 %    additional frequencies w(1 +/- dw_frac) with dw_frac = 2e-2
 %    (see calc_der96_TI.m, which also rejects spurious tdisp96 roots).
-%  - kernel.dcdh is the CPS TI layer-thickness partial (DC/DH in tdpder96).
-%  - kernel.dcdrho is a true density kernel. Note that the columns that
-%    calc_kernel96.m returns as dcdrho/dudrho are columns 7-8 of the srfker96
-%    output, which are dc/dh and dU/dh (layer thickness), not density.
+%  - kernel.dcdh is the CPS TI thickness partial (DC/DH in tdpder96); it
+%    agrees with the srfker96 dc/dh returned by calc_kernel96.m (outputs 8-9).
+%  - kernel.dcdrho is a density kernel, comparable with outputs 6-7 of
+%    calc_kernel96.m.
 %  - Love waves have no sensitivity to Vpv, Vph, or eta (returned as zeros).
 %
 % jbrussell 11/2026

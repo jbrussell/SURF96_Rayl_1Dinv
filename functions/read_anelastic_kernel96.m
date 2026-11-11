@@ -6,6 +6,12 @@
 % 
 % jbrussell 6/12/2023: Include anelastic kernels (has not been updated for Love waves!)
 %
+% jbrussell 11/2026: NOTE no longer used by calc_anelastic_kernel96.m.
+% The fields named dcdrho/dudrho here are srfker96's dc/dh and dU/dh
+% (layer thickness), not density kernels, and the srfker96 phase-velocity
+% kernels and the quantities derived from them lack the spherical-earth
+% correction (see calc_kernel96.m and calc_anelastic_kernel96.m).
+%
 function [kern, dispersion] = read_anelastic_kernel96(filename,wavetype,varargin)
 
 if nargin==2
@@ -19,7 +25,7 @@ if(fid>=0)
 	it = 0;
 	while 1
     	stemp=fgetl(fid);
-	    if (strmatch('Anelastic',stemp))    % find where Elastic Love wave kernel begins
+	    if (ischar(stemp) && strncmp(stemp,'Anelastic',9))    % find where Elastic Love wave kernel begins
 %             Anelastic Rayleigh wave: Period=    47.000 Mode =    0 C=     3.931 U=     3.960 GAMMA=  1.578E-04
         	C = textscan(stemp,'%s%s wave: Period=%f Mode =%d C=%f U=%f GAMMA=%f' );
             elastic_anelastic = C{1};

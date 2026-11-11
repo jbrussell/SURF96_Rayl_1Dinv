@@ -32,9 +32,8 @@ function [kernel, dispersion] = calc_anelastic_kernel96_TI(model, vec_T, wavetyp
 %   dudQs, dudQp, dgdQs, dgdQp, dQdQs, dQdQp, dgdQmu, dgdQkap, dQdQmu,
 %   dQdQkap, z) plus the TI kernels of calc_kernel96_TI.m (dcdvpv, dcdvph,
 %   dcdvsv, dcdvsh, dcdeta, dcdrho, dcdh and the dU equivalents).
-%   NOTE: here dcdrho/dudrho are true density kernels and dcdh/dudh are
-%   thickness kernels (in calc_anelastic_kernel96.m the fields named
-%   dcdrho/dudrho hold srfker96's dc/dh and dU/dh).
+%   dcdrho/dudrho are density kernels and dcdh/dudh thickness kernels, as
+%   in calc_anelastic_kernel96.m.
 %   Qs and Qp kernels are with respect to Qs^-1 and Qp^-1. The Qmu/Qkappa
 %   conversion uses Voigt-average Vs and Vp.
 % dispersion: structure with fields period, mode, phv, grv, gamma, qinv,

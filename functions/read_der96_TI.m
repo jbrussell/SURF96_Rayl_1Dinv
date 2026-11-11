@@ -36,7 +36,9 @@
 %      ([nper x maxroots], NaN padded)
 %
 % The binary layout follows tio.f (getmdt / gethed / getdrt) in CPS
-% VOLIII/src. Fortran sequential unformatted records with 4-byte
+% VOLIII/src. The isotropic files written by "sregn96 -DER" / "slegn96 -DER"
+% (sio.f) have the same layout and can also be read: dc/dVp and dc/dVs are
+% then returned as dcdvpv and dcdvsv (dcdvph, dcdvsh and dcdeta are NaN). Fortran sequential unformatted records with 4-byte
 % little-endian record markers (gfortran default) are assumed.
 %
 % jbrussell 11/2026
@@ -108,25 +110,25 @@ while irec <= numel(recs)
             b.ellip = NaN;
         end
         if strcmp(wavetype,'L')
-            if ipar(4)==1
+            if ipf(ipar,4)
                 [b.ur, irec] = getarr(recs, irec); [b.tr, irec] = getarr(recs, irec);
             end
-            if ipar(5)==1;  [b.dcdh, irec]  = getarr(recs, irec); end
-            if ipar(7)==1;  [b.dcdbv, irec] = getarr(recs, irec); end
-            if ipar(8)==1;  [b.dcdr, irec]  = getarr(recs, irec); end
-            if ipar(11)==1; [b.dcdbh, irec] = getarr(recs, irec); end
+            if ipf(ipar,5);  [b.dcdh, irec]  = getarr(recs, irec); end
+            if ipf(ipar,7);  [b.dcdbv, irec] = getarr(recs, irec); end
+            if ipf(ipar,8);  [b.dcdr, irec]  = getarr(recs, irec); end
+            if ipf(ipar,11); [b.dcdbh, irec] = getarr(recs, irec); end
         else
-            if ipar(4)==1
+            if ipf(ipar,4)
                 [b.ur, irec] = getarr(recs, irec); [b.tr, irec] = getarr(recs, irec);
                 [b.uz, irec] = getarr(recs, irec); [b.tz, irec] = getarr(recs, irec);
             end
-            if ipar(5)==1;  [b.dcdh, irec]  = getarr(recs, irec); end
-            if ipar(6)==1;  [b.dcdav, irec] = getarr(recs, irec); end
-            if ipar(7)==1;  [b.dcdbv, irec] = getarr(recs, irec); end
-            if ipar(8)==1;  [b.dcdr, irec]  = getarr(recs, irec); end
-            if ipar(9)==1;  [b.dcdah, irec] = getarr(recs, irec); end
-            if ipar(10)==1; [b.dcdn, irec]  = getarr(recs, irec); end
-            if ipar(11)==1; [b.dcdbh, irec] = getarr(recs, irec); end
+            if ipf(ipar,5);  [b.dcdh, irec]  = getarr(recs, irec); end
+            if ipf(ipar,6);  [b.dcdav, irec] = getarr(recs, irec); end
+            if ipf(ipar,7);  [b.dcdbv, irec] = getarr(recs, irec); end
+            if ipf(ipar,8);  [b.dcdr, irec]  = getarr(recs, irec); end
+            if ipf(ipar,9);  [b.dcdah, irec] = getarr(recs, irec); end
+            if ipf(ipar,10); [b.dcdn, irec]  = getarr(recs, irec); end
+            if ipf(ipar,11); [b.dcdbh, irec] = getarr(recs, irec); end
         end
         blk{j} = b; %#ok<AGROW>
     end
@@ -204,6 +206,11 @@ if strcmp(wavetype,'L')
     eig.dcdeta(:,isnan(eig.phv)) = NaN;
 end
 
+end
+
+function tf = ipf(ipar, k)
+% true if output flag k is set (the isotropic s?egn96 files have fewer flags)
+tf = numel(ipar) >= k && ipar(k) == 1;
 end
 
 function [a, irec] = getarr(recs, irec)

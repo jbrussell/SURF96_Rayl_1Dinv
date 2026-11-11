@@ -63,12 +63,24 @@ CPS has no TI version of srfker96, so the code computes:
   srfker96 causal-Q correction (`getgam` and `cslmod` in `srfker96.f`) to the
   elastic TI kernels.
 
-> **Note on the isotropic `calc_kernel96`.** Its 6th and 7th outputs
-> (`dcdrho`, `dudrho`), and the `dcdrho`/`dudrho` fields of
-> `calc_anelastic_kernel96`, are read from columns 7–8 of the srfker96 output.
-> Those columns are **dc/dh and dU/dh (layer thickness)**, not density. The TI
-> functions return true density kernels as `dcdrho`/`dudrho` and thickness
-> kernels as `dcdh`/`dudh`.
+> **Changes to the isotropic `calc_kernel96` and `calc_anelastic_kernel96`
+> (November 2026).**
+> - Outputs 6–7 (`dcdrho`, `dudrho`) used to be columns 7–8 of the srfker96
+>   output, which are dc/dh and dU/dh (layer thickness), not density. They
+>   are now real density kernels, from `sregn96`/`slegn96 -DER`
+>   (`calc_density_kernel96`). srfker96's thickness kernels are returned as
+>   new outputs 8–9 (`dcdh`, `dudh`), followed by the elastic phase and group
+>   velocities.
+> - srfker96's phase-velocity kernels dc/dVs and dc/dVp are now multiplied
+>   by the earth-flattening factor. Because `calc_kernel96` requests only
+>   group velocity, `srfdrr96`/`srfdrl96` map only the group-velocity
+>   kernels back to the spherical model. Without the factor, the kernels
+>   were too small by up to ~2.4% at 150 km depth.
+> - `calc_anelastic_kernel96` now computes γ, the causal kernels and the Q
+>   kernels from these corrected elastic kernels, using the srfker96
+>   formulas. It uses `fref` and supports Love waves.
+>
+> The TI functions use the same conventions.
 
 ## Benchmarks
 
@@ -96,13 +108,17 @@ As a result, phase and group velocities differ by about 1e-4 (Rayleigh) and
 1e-5 (Love) in relative terms. With `FLAT EARTH` models they agree to the
 output precision.
 
-The velocity kernels differ by a depth-dependent factor of about `a/(a-z)`
-(about 2% at 150 km depth). `tregn96` applies the earth-flattening chain
-rule to the kernels and srfker96 does not. Finite differences of the
-spherical-earth phase velocity agree with the **TI** kernels, so for
-spherical-earth models the isotropic srfker96 velocity kernels are slightly
-too small at depth. With flat-earth models the TI kernels, including the
-computed group-velocity kernels, match srfker96 to about 1e-4 to 1e-3.
+Because F is not flattened, the Rayleigh-wave Vp-type kernels (dc/dVp,
+dU/dVp and the Qp kernels) differ the most: up to ~1.5% at 50 s for the
+benchmark model. The TI kernels are still consistent with TI dispersion
+(finite-difference checks pass).
+
+The kernels agree to about 1e-4 to 1e-3, which is the precision of the
+srfker96 text output. That holds now that `calc_kernel96` applies the
+spherical-earth mapping to srfker96's phase-velocity kernels (see above);
+before the fix they differed by a factor of about `a/(a-z)`. The TI and
+corrected isotropic kernels both agree with finite differences of the
+spherical-earth phase velocity.
 
 ## Known CPS TI issues (handled or flagged by the wrappers)
 
@@ -165,7 +181,4 @@ computed group-velocity kernels, match srfker96 to about 1e-4 to 1e-3.
 The CPS TI programs `tprep96`, `tdisp96`, `tregn96` and `tlegn96` must be on
 the PATH, along with `gtimeout` (on mac, `brew install coreutils`; on Linux,
 link `gtimeout` to `timeout`). The functions run in MATLAB and in Octave
-(tested with Octave 8.4). Note that the isotropic `read_eig96`, which
-`calc_eigenfunctions96` uses, calls `contains`, which Octave 8 does not have.
-For that reason `benchmark_TI_eigenfunctions` needs MATLAB, or a `contains`
-shim, in Octave 8.
+(tested with Octave 8.4).
