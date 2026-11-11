@@ -96,7 +96,20 @@ Vph, ρ and η. The setup follows the MINEOS Rayleigh-wave inversion:
 - water layer fixed
 
 With a single wave type, ξ is not constrained by the data, so use a large
-`eps_xi`. The final figure compares the true, starting and recovered Vsv,
+`eps_xi`.
+
+In the synthetic test, the true anisotropy (ξ = 1.08 at 30–150 km, with Vph
+raised alongside Vsh, so φ = 1/ξ) is recovered well with 10–40 s R + L data
+(ξ ≈ 1.06–1.09 at 50–120 km) provided that:
+- **the norm damping is weak** (`eps_H` = 0.005). Stronger damping toward
+  the starting model leaves the long-period Love data underpredicted
+  (about +1.2σ) and ξ underestimated (≈ 1.04).
+- **the smoothing is broken at the model's discontinuities** (water bottom,
+  sediments, Moho). Without the breaks, the smoothing across the Moho
+  prevents fitting the short-period data, and weak damping then puts the
+  misfit into an oscillating ξ (1.16 at 80 km, 0.97 at 50 km).
+
+Extending the periods to 100 s improves ξ below ~100 km. The final figure compares the true, starting and recovered Vsv,
 Vsh, Vpv, Vph, ρ, η and ξ with formal 1σ uncertainties.
 `card2mod_TI.m` converts a MINEOS card to the TI layered model format.
 

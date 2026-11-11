@@ -193,7 +193,9 @@ for ii = 1:nit
         
         ifnorm = 0; % for plotting only
         ifplot = 0;
-        [dcdvs, dcdvp, dudvs, dudvp, zkern, dcdrho, dudrho] = calc_kernel96(startmod, periods, 'R', ifnorm, ifplot,nmode,fref);
+        % kernels for the current model (jbrussell 11/2026: was startmod,
+        % so the kernels were never updated)
+        [dcdvs, dcdvp, dudvs, dudvp, zkern, dcdrho, dudrho] = calc_kernel96(premod, periods, 'R', ifnorm, ifplot,nmode,fref);
         G = [dcdvs' dcdvp' dcdrho'];
     end
     

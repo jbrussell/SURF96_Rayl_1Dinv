@@ -15,8 +15,9 @@
 % (eps_xi large).
 %
 % Synthetic test: the true model is the starting model with Vsv, Vsh, Vpv,
-% Vph, and Rho increased by 5% above 80 km and radial anisotropy
-% (xi = 1.08, Vsh > Vsv) added between 30 and 150 km.
+% Vph, and Rho increased by 5% above 80 km and radial anisotropy added
+% between 30 and 150 km by raising Vsh and Vph by sqrt(1.08)
+% (xi = (Vsh/Vsv)^2 = 1.08, phi = (Vpv/Vph)^2 = 1/1.08).
 %
 % jbrussell 11/2026
 %
@@ -38,7 +39,12 @@ data_types = 'RL'; % 'RL' = Rayleigh + Love, 'R' = Rayleigh only, 'L' = Love onl
 
 %% Inversion regularization parameters
 eps_data = 1; % data fit
-eps_H = 0.05; % norm damping
+eps_H = 0.005; % norm damping
+% Note: the norm damping pulls Vsv and Vsh toward their absolute starting
+% values. Love waves need a larger change in Vsh (velocity change + xi)
+% than Rayleigh waves need in Vsv, so a damping as strong as in
+% test_kernel_inversion_vs_vp_rho.m (0.05) leaves the long-period Love
+% data systematically underpredicted and xi underestimated.
 eps_J = 0.001; % first derivative smoothing
 eps_F = 2; % second derivative smoothing
 eps_vpvs = 10; % enforce Vpv/Vsv and Vph/Vsh ratios
@@ -77,10 +83,14 @@ z = [0; cumsum(truemod(:,1))];
 zmid = z(1:end-1) + truemod(:,1)/2;
 Ibot = find(z<=80); Ibot = Ibot(end);
 truemod(2:Ibot,[2 3 4 5 6]) = truemod(2:Ibot,[2 3 4 5 6])*1.05;
-% add radial anisotropy: xi = (Vsh/Vsv)^2 = 1.08 between 30 and 150 km
+% add radial anisotropy between 30 and 150 km: Vsh and Vph are both raised
+% by the factor sqrt(xi_true), so that xi = (Vsh/Vsv)^2 = xi_true and
+% phi = (Vpv/Vph)^2 = 1/xi_true. (The inversion ties Vph to Vsh, so the P
+% anisotropy of the true model is consistent with that parameterization.)
 xi_true = 1.08;
 I_ani = find(zmid>=30 & zmid<=150);
-truemod(I_ani,6) = truemod(I_ani,3)*sqrt(xi_true);
+truemod(I_ani,6) = truemod(I_ani,6)*sqrt(xi_true); % Vsh
+truemod(I_ani,5) = truemod(I_ani,5)*sqrt(xi_true); % Vph
 
 % GENERATE SYNTHETIC DATASET
 % Calculate dispersion for the true model (which is like the data)
@@ -100,7 +110,10 @@ cstd = cobs * 0.01; % observation uncertainties
 % load starting model
 [startmod, discs] = card2mod_TI(CARD,zmax);
 startmod(end,7) = 1; % eta = 1 in the half-space (as for the true model)
-discs = []; % for this simple example, don't allow discontinuities
+% Break the smoothing at the discontinuities of the card (water bottom,
+% sediments, Moho). Smoothing across the Moho prevents the inversion from
+% fitting the short-period (crust-sensitive) data, and the misfit then
+% leaks into the mantle anisotropy. Set discs = [] to smooth across them.
 
 figure(1); clf; set(gcf,'position',[50 50 1200 600]);
 plot_model_TI({startmod, truemod}, {'start','true'}, zmax);
