@@ -17,7 +17,7 @@
 %
 % jbrussell 11/2026
 %
-clear; close all;
+clear; % (no 'close all', so figures from the other benchmark scripts are kept; this script uses figures 101-105)
 benchmark_TI_setup;
 fprintf('\n===== benchmark_TI_dispersion =====\n');
 fid = fopen(logfile,'a'); fprintf(fid,'\n===== benchmark_TI_dispersion =====\n'); fclose(fid);
@@ -32,8 +32,14 @@ modes = [0 1];
 wavetypes = {'R','L'};
 types = {'C','U'};
 
+% plot the models
+figure(101); clf; set(gcf,'position',[50 50 1200 600]);
+plot_model_TI({model, benchmark_model_TI(1)}, {'benchmark model','with Q (Q tests)'}, 200);
+subplot(1,5,1); title('benchmark_TI_dispersion: models','interpreter','none');
+print(gcf,'-dpng',[figdir,'dispersion_models.png']);
+
 for iw = 1:2
-    figure(iw); clf;
+    figure(101+iw); clf;
     set(gcf,'position',[100 100 900 700]);
     for it = 1:2
         for im = 1:length(modes)
@@ -86,7 +92,12 @@ xi(z>=10) = 1.1;
 model_TI_xi = convert_iso2TI(model,xi);
 cR0 = dispR_surf96_TI(vec_T,model_TI); cR1 = dispR_surf96_TI(vec_T,model_TI_xi);
 cL0 = dispL_surf96_TI(vec_T,model_TI); cL1 = dispL_surf96_TI(vec_T,model_TI_xi);
-figure(3); clf; hold on; box on;
+figure(105); clf; set(gcf,'position',[50 50 1200 600]);
+plot_model_TI({model_TI, model_TI_xi}, {'isotropic','\xi = 1.1 below 10 km'}, 200);
+subplot(1,4,1); title('Radial anisotropy demonstration: models');
+print(gcf,'-dpng',[figdir,'dispersion_radial_anisotropy_models.png']);
+
+figure(104); clf; hold on; box on;
 plot(vec_T,cR0,'-b',vec_T,cR1,'--b',vec_T,cL0,'-r',vec_T,cL1,'--r','linewidth',1.5);
 legend({'Rayleigh, isotropic','Rayleigh, \xi=1.1 mantle','Love, isotropic','Love, \xi=1.1 mantle'},'location','southeast');
 xlabel('Period (s)'); ylabel('Phase velocity (km/s)');

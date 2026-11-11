@@ -25,7 +25,7 @@
 %
 % jbrussell 11/2026
 %
-clear; close all;
+clear; % (no 'close all', so figures from the other benchmark scripts are kept; this script uses figures 201-204)
 benchmark_TI_setup;
 fprintf('\n===== benchmark_TI_kernels =====\n');
 fid = fopen(logfile,'a'); fprintf(fid,'\n===== benchmark_TI_kernels =====\n'); fclose(fid);
@@ -61,7 +61,7 @@ for iw = 1:2
     bench_compare_TI([wt,' dc/dh'], kernel.dcdh, dcdh_iso, tol_iso, 'peak', logfile);
     bench_compare_TI([wt,' dU/dh'], kernel.dudh, dudh_iso, tol_iso, 'peak', logfile);
 
-    figure(iw); clf; set(gcf,'position',[50 50 1200 700]);
+    figure(201+iw); clf; set(gcf,'position',[50 50 1200 700]);
     if strcmp(wt,'R')
         pl = {'dcdvs','dcdvp','dudvs','dudvp'}; iso = {dcdvs,dcdvp,dudvs,dudvp};
         lab = {'dc/dVs','dc/dVp','dU/dVs','dU/dVp'};
@@ -123,8 +123,14 @@ for iw = 1:2
     end
 end
 
+% plot the models
+figure(201); clf; set(gcf,'position',[50 50 1200 600]);
+plot_model_TI({model_TI, model_ani}, {'iso vs TI (Part 1)','anisotropic, FD tests (Part 2)'}, 200);
+subplot(1,4,1); title('benchmark_TI_kernels: models','interpreter','none');
+print(gcf,'-dpng',[figdir,'kernels_models.png']);
+
 % plot the anisotropic-model kernels
-figure(3); clf; set(gcf,'position',[50 50 1200 700]);
+figure(204); clf; set(gcf,'position',[50 50 1200 700]);
 [KR] = calc_kernel96_TI(model_ani, 25, 'R', 0, 0);
 [KL] = calc_kernel96_TI(model_ani, 25, 'L', 0, 0);
 pl = {'dcdvsv','dcdvsh','dcdvpv','dcdvph','dcdeta','dcdrho'};

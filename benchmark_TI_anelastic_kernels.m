@@ -14,7 +14,7 @@
 %
 % jbrussell 11/2026
 %
-clear; close all;
+clear; % (no 'close all', so figures from the other benchmark scripts are kept; this script uses figures 401-403)
 benchmark_TI_setup;
 fprintf('\n===== benchmark_TI_anelastic_kernels =====\n');
 fid = fopen(logfile,'a'); fprintf(fid,'\n===== benchmark_TI_anelastic_kernels =====\n'); fclose(fid);
@@ -22,6 +22,13 @@ fid = fopen(logfile,'a'); fprintf(fid,'\n===== benchmark_TI_anelastic_kernels ==
 model_Q = benchmark_model_TI(1);         % [H Vp Vs rho Qp Qs]
 model_TI_Q = convert_iso2TI(model_Q);    % [H Vpv Vsv rho Vph Vsh eta Qp Qs]
 vec_T = [5 10 20 50];
+
+% plot the model
+figure(401); clf; set(gcf,'position',[50 50 1200 600]);
+plot_model_TI(model_TI_Q, {'benchmark model with Q'}, 200);
+subplot(1,5,1); title('benchmark_TI_anelastic_kernels: model','interpreter','none');
+print(gcf,'-dpng',[figdir,'anelastic_model.png']);
+
 tol_iso = 1e-2;
 tol_vp  = 2e-2; % Rayleigh Vp / Qp kernels
 % Rayleigh-wave Vp-type kernels are compared with a looser tolerance
@@ -52,19 +59,22 @@ for wt = {'R','L'}
     bench_compare_TI([wt,' anelastic phase velocity'], d_TI.phv, d_iso.phv, tol_self, 'rel', logfile);
     bench_compare_TI([wt,' anelastic group velocity'], d_TI.grv, d_iso.grv, tol_self, 'rel', logfile);
     bench_compare_TI([wt,' attenuation coefficient gamma'], d_TI.gamma, d_iso.gamma, tol_iso, 'rel', logfile);
-    if strcmp(wt,'R'); k_iso_R = k_iso; k_TI_R = k_TI; end
-end
-k_iso = k_iso_R; k_TI = k_TI_R;
 
-figure; set(gcf,'position',[50 50 1200 600]);
-pl = {'dcdvs','dcdvp','dQdQmu','dQdQkap'};
-for jj = 1:4
-    subplot(1,4,jj); hold on; box on;
-    plot(k_iso.(pl{jj}), k_iso.z, '-k', 'linewidth', 2);
-    plot(k_TI.(pl{jj}), k_TI.z, '--r', 'linewidth', 1.5);
-    axis ij; ylim([0 150]); xlabel(pl{jj}); ylabel('Depth (km)'); title('R: black iso, red TI');
+    % plot the kernels
+    figure(402 + strcmp(wt,'L')); clf; set(gcf,'position',[50 50 1200 600]);
+    if strcmp(wt,'R')
+        pl = {'dcdvs','dcdvp','dcdrho','dQdQmu','dQdQkap'};
+    else
+        pl = {'dcdvs','dudvs','dcdrho','dQdQmu'};
+    end
+    for jj = 1:length(pl)
+        subplot(1,length(pl),jj); hold on; box on;
+        plot(k_iso.(pl{jj}), k_iso.z, '-k', 'linewidth', 2);
+        plot(k_TI.(pl{jj}), k_TI.z, '--r', 'linewidth', 1.5);
+        axis ij; ylim([0 150]); xlabel(pl{jj}); ylabel('Depth (km)'); title([wt,': black iso, red TI']);
+    end
+    print(gcf,'-dpng',[figdir,'anelastic_kernels_iso_vs_TI_',wt,'.png']);
 end
-print(gcf,'-dpng',[figdir,'anelastic_kernels_iso_vs_TI_R.png']);
 
 %% Part 2: self-consistency (Rayleigh and Love)
 z = [0; cumsum(model_Q(1:end-1,1))];

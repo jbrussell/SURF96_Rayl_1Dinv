@@ -92,7 +92,11 @@ Each script compares the isotropic wrapper with the TI wrapper for a TI
 model converted from an isotropic oceanic model (water, sediment, crust and
 mantle). The TI kernels are also checked against finite differences for a
 model with real anisotropy. A PASS/FAIL line is printed for each comparison.
-The summary and the figures are written to `benchmark_TI_figs/`. To use CPS
+The summary and the figures are written to `benchmark_TI_figs/`. Each
+script plots the layered model(s) it uses (`plot_model_TI`) and keeps its
+figures in its own numbering range, so `benchmark_TI_run_all` leaves every
+figure open: dispersion 101–105, kernels 201–204, eigenfunctions 301–304,
+anelastic kernels 401–403. To use CPS
 binaries other than `bin_v3.30/`, set the environment variable `CPS_BIN`.
 
 ### Expected iso vs TI differences (spherical-earth models)

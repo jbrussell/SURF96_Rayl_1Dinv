@@ -18,7 +18,7 @@
 %
 % jbrussell 11/2026
 %
-clear; close all;
+clear; % (no 'close all', so figures from the other benchmark scripts are kept; this script uses figures 301-304)
 benchmark_TI_setup;
 fprintf('\n===== benchmark_TI_eigenfunctions =====\n');
 fid = fopen(logfile,'a'); fprintf(fid,'\n===== benchmark_TI_eigenfunctions =====\n'); fclose(fid);
@@ -28,6 +28,12 @@ model_TI = convert_iso2TI(model);  % TI [H Vpv Vsv rho Vph Vsh eta]
 vec_T = [4 6 8 10 15 20 30 50];
 tol_eig = 2e-2;  % peak-normalized
 tol_disp = 2e-3; % relative
+
+% plot the models
+figure(301); clf; set(gcf,'position',[50 50 1200 600]);
+plot_model_TI({model, benchmark_model_TI(1)}, {'benchmark model','with Q (model Q tests)'}, 200);
+subplot(1,5,1); title('benchmark_TI_eigenfunctions: models','interpreter','none');
+print(gcf,'-dpng',[figdir,'eigenfunctions_models.png']);
 
 %% Eigenfunctions
 for wt = {'R','L'}
@@ -64,7 +70,7 @@ for wt = {'R','L'}
                 eig_TI.(flds{ii})(:,I), eig_iso.(flds{ii}), tol_eig, 'peak', logfile);
         end
         if nmode == 0
-            figure; set(gcf,'position',[50 50 1100 600]);
+            figure(302 + strcmp(wt,'L')); clf; set(gcf,'position',[50 50 1100 600]);
             for ii = 1:length(flds)
                 subplot(1,length(flds),ii); hold on; box on;
                 plot(eig_iso.(flds{ii}), eig_iso.z, '-k', 'linewidth', 2);
@@ -108,7 +114,7 @@ adm_TI  = calc_admittance96_Ruan14_TI(vec_T, model_TI, 0);
 [~, I] = ismember(round(adm_iso.periods*1e3), round(adm_TI.periods*1e3));
 bench_compare_TI('R admittance (Ruan et al., 2014)', adm_TI.admittance(I), adm_iso.admittance, tol_eig, 'rel', logfile);
 
-figure; hold on; box on;
+figure(304); clf; hold on; box on;
 plot(adm_iso.periods, adm_iso.admittance, '-ok', 'linewidth', 2);
 plot(adm_TI.periods, adm_TI.admittance, '--xr', 'linewidth', 1.5);
 xlabel('Period (s)'); ylabel('Admittance (m/Pa)'); title('Black: iso, red: TI');
