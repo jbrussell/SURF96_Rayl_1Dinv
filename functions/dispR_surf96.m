@@ -85,13 +85,14 @@ else % Otherwise, calculate non-Q-corrected phase velocity
             phv = interp1(T_returned, v_returned, vec_T, 'linear', NaN);
         end
     else
-        phv=[];
+        phv = NaN(n_requested, 1);
     end
-    %
+    
     system('surf96 39'); % clean up
     
     phv = phv(:);
 end
+
 
 end
 
