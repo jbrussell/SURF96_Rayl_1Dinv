@@ -82,6 +82,24 @@ CPS has no TI version of srfker96, so the code computes:
 >
 > The TI functions use the same conventions.
 
+## Inversion for radial anisotropy
+
+`test_kernel_inversion_vsvh_vpvh_rho_eta.m` is the TI version of
+`test_kernel_inversion_vs_vp_rho.m`. It is a synthetic test that uses
+`run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta.m` to invert Rayleigh and/or Love
+phase velocities (`data_types = 'RL'`, `'R'` or `'L'`) for Vsv, Vsh, Vpv,
+Vph, ρ and η. The setup follows the MINEOS Rayleigh-wave inversion:
+- damping and smoothing of Vsv and Vsh
+- Vpv/Vsv, Vph/Vsh and ρ/Vsv tied to the starting model
+- ξ and η damped toward the starting model (`eps_xi`, `eps_eta`)
+- ξ held fixed where Vsv < `vsv_thresh_xi` (crust and sediments)
+- water layer fixed
+
+With a single wave type, ξ is not constrained by the data, so use a large
+`eps_xi`. The final figure compares the true, starting and recovered Vsv,
+Vsh, Vpv, Vph, ρ, η and ξ with formal 1σ uncertainties.
+`card2mod_TI.m` converts a MINEOS card to the TI layered model format.
+
 ## Benchmarks
 
 ```matlab
