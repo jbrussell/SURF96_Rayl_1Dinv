@@ -157,6 +157,25 @@ Results (noise-free data, 1% uncertainties):
   "fundamental-mode" Love wave below ~40 s is the mode-1 branch of the
   CPS numbering. The forward problem must follow the branch that is
   measured.
+- **`nmode = 'maxamp'`** (all TI wrappers and the TI inversion; see
+  `calc_der96_TI.m`): at each period, use the branch among modes 0–2
+  (`'maxampN'` for 0–N) with the largest surface amplitude for a source and
+  a receiver at the sea floor, AL·ut(top)² or AR·uz(top)². `eig.mode`
+  returns the selected mode. In PA5 it selects Love mode 1 at 10–55 s and
+  mode 0 above; Rayleigh and PREM stay on mode 0. Caveat: in PA5 at
+  ~13–55 s the crust/lid Love wave leaks into the LVZ and its energy is
+  shared by modes 1–3, with surface amplitudes within a factor of ~1–2.5
+  and group velocities within ~0.1 km/s. A sea-floor record is then a
+  superposition, and the strongest-branch phase velocity is an idealization.
+- **PA5 with the max-amplitude branch**
+  (`test_kernel_inversion_vsvh_vpvh_rho_eta_PA5_maxamp.m`): the data
+  (Love mode 1 to 55 s, 4.54–5.13 km/s) are not fitted (χ² = 5.4 one
+  stage, 3.6 two stages). The smooth models select Love mode 0 at 30–55 s
+  (one stage) or 48–55 s (two stages) and underpredict those data by up to
+  0.5 km/s. Without the sharp lid/LVZ contrast at 68.5 km (which the
+  smoothing does not allow), the branch switch of the data cannot be
+  reproduced. The lid ξ improves (1.05 for both, vs 1.01 one-stage with
+  mode 0), but ξ is too high in and below the LVZ (1.05–1.06 at 166–220 km).
 
 Extending the periods to 100 s improves ξ below ~100 km. The final figure compares the true, starting and recovered Vsv,
 Vsh, Vpv, Vph, ρ, η and ξ with formal 1σ uncertainties.
