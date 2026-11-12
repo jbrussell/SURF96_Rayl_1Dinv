@@ -15,7 +15,12 @@ function [finalmod,cpre,vs_std,vp_std,rho_std,unc] = run_surf96_inv_Rayl_Vs_Vp_R
 % cobs - phase velocity observed km/s [N x 1]
 % cstd - phase velocity uncertainty km/s [N x 1]
 % periods - seconds [N x 1]
-% startmod - starting model: dz (km), vp (km/s), vs (km/s), rho (kg/m^3) [M x 4]
+% startmod - starting model: dz (km), vp (km/s), vs (km/s), rho (kg/m^3) [M x 4],
+%            or [dz vp vs rho Qp Qs] [M x 6] to include attenuation: the
+%            phase velocities and kernels then include the causal (physical
+%            dispersion) correction for that Q model (dispR_surf96 and
+%            calc_kernel96 with Q, reference frequency fref = optional
+%            last argument, default 1 Hz). Q is held fixed (not inverted).
 % discs - depth of desired discontinuities in smoothing (km) [any length x 1]
 % eps_data - weight for data fit as fraction of G norm [scalar]
 % eps_H - weight for norm damping as fraction of G norm [scalar]

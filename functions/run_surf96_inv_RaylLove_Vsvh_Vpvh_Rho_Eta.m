@@ -1,5 +1,5 @@
 function [finalmod,cpre,unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cstd,periods,wavetype,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,eps_xi,eps_eta,z_dampbot,nit,nit_recalc_c,nmode,varargin)
-% [finalmod,cpre,unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(..., nmode, isfigure, vsv_thresh_xi)
+% [finalmod,cpre,unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(..., nmode, isfigure, vsv_thresh_xi, fref)
 % Do linearized inversion of Rayleigh and/or Love wave phase velocities for
 % a transversely isotropic (radially anisotropic) model: Vsv, Vsh, Vpv,
 % Vph, density (rho) and eta, using the CPS TI programs (via the *_TI
@@ -35,7 +35,9 @@ function [finalmod,cpre,unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cs
 %            or a single character if all data are the same type.
 %            Rayleigh and Love data may be mixed in any order.
 % startmod - starting TI model [H Vpv Vsv rho Vph Vsh eta] [M x 7]
-%            (km, km/s, g/cm^3; see writemod_surf96_TI.m)
+%            (km, km/s, g/cm^3; see writemod_surf96_TI.m), or
+%            [H Vpv Vsv rho Vph Vsh eta Qp Qs] [M x 9] to include
+%            attenuation in the forward calculation (see below)
 % discs - depth of desired discontinuities in smoothing (km) [any length x 1]
 % eps_data - weight for data fit [scalar]
 % eps_H - weight for norm damping as fraction of G norm [scalar]
@@ -53,6 +55,7 @@ function [finalmod,cpre,unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cs
 % isfigure - plot the progress of the inversion (OPTIONAL, default 1)
 % vsv_thresh_xi - hold xi at the starting model where 0 < Vsv < vsv_thresh_xi
 %                 (km/s) in the starting model (OPTIONAL, default 0 = off)
+% fref - reference frequency (Hz) of the Q model (OPTIONAL, default 1)
 %
 % OUTPUTS
 % finalmod - final TI model [H Vpv Vsv rho Vph Vsh eta] [M x 7]
@@ -62,7 +65,12 @@ function [finalmod,cpre,unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cs
 %       model resolution R [6M x 6M] (parameter order Vsv, Vsh, Vpv, Vph,
 %       Rho, Eta) and data resolution Ndat [N x N]
 %
-% The forward problem is elastic (Q^-1 = 0), as in dispR_surf96.m.
+% ATTENUATION: if startmod has Qp and Qs columns, the phase velocities and
+% kernels include the causal (physical dispersion) correction for that Q
+% model (dispR/dispL_surf96_TI and calc_kernel96_TI with Q, reference
+% frequency fref). Q is not inverted for: Qp and Qs are held at their
+% starting values. Without Q columns the forward problem is elastic
+% (Q^-1 = 0).
 %
 % jbrussell - 11/2026
 
@@ -73,6 +81,13 @@ end
 vsv_thresh_xi = 0;
 if length(varargin) >= 2 && ~isempty(varargin{2})
     vsv_thresh_xi = varargin{2};
+end
+fref = 1;
+if length(varargin) >= 3 && ~isempty(varargin{3})
+    fref = varargin{3};
+end
+if ~any(size(startmod,2) == [7 9])
+    error('startmod must have 7 columns [H Vpv Vsv rho Vph Vsh eta] or 9 columns [... Qp Qs]');
 end
 
 cobs = cobs(:); cstd = cstd(:); periods = periods(:);
@@ -92,7 +107,7 @@ z = cumsum(startmod(:,1)); % bottom of each layer (km)
 zmid = z - startmod(:,1)/2; zmid(end) = z(end-1);
 
 % Kernels for the G matrix
-G = build_G(startmod, periods, wavetype, nmode);
+G = build_G(startmod, periods, wavetype, nmode, fref);
 
 % Data weighting
 W = diag(1./cstd);
@@ -187,7 +202,7 @@ h = [hd*eps_H0; jd*eps_J0; fd*eps_F0; zeros(3*length(ind_solid),1); ...
      zeros(length(ind_solid),1); eta_vec*eps_eta0; w_h2o*eps_large*NA];
 
 % Data vector
-cstart = predict(startmod, periods, wavetype, nmode);
+cstart = predict(startmod, periods, wavetype, nmode, fref);
 cpre = cstart;
 
 % Least squares inversion
@@ -231,14 +246,14 @@ for ii = 1:nit
 
     if mod(ii,nit_recalc_c)==0 && ii < nit
         % recalculate phase velocities and kernels for the current model
-        cnew = predict(premod, periods, wavetype, nmode);
+        cnew = predict(premod, periods, wavetype, nmode, fref);
         inan = isnan(cnew);
         if any(inan)
             warning('run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta: %d phase velocities could not be calculated; keeping the linearized prediction there', sum(inan));
             cnew(inan) = cpre(inan);
         end
         cpre = cnew;
-        G = build_G(premod, periods, wavetype, nmode);
+        G = build_G(premod, periods, wavetype, nmode, fref);
     end
 
     if isfigure
@@ -275,13 +290,14 @@ for ii = 1:nit
 end
 
 finalmod = premod;
-cpre = predict(finalmod, periods, wavetype, nmode);
+cpre = predict(finalmod, periods, wavetype, nmode, fref);
 
 end
 
 %% ------------------------------------------------------------------------
-function G = build_G(model, periods, wavetype, nmode)
+function G = build_G(model, periods, wavetype, nmode, fref)
 % phase-velocity kernels [N x 6M] for m = [Vsv; Vsh; Vpv; Vph; Rho; Eta]
+% (Q-corrected kernels if the model has Qp, Qs columns)
 N = length(periods);
 nlayer = size(model,1);
 G = zeros(N, 6*nlayer);
@@ -289,7 +305,7 @@ flds = {'dcdvsv','dcdvsh','dcdvpv','dcdvph','dcdrho','dcdeta'};
 for wt = 'RL'
     I_w = find(wavetype == wt);
     if isempty(I_w); continue; end
-    kernel = calc_kernel96_TI(model(:,1:7), periods(I_w), wt, 0, 0, nmode);
+    kernel = calc_kernel96_TI(model, periods(I_w), wt, 0, 0, nmode, fref);
     if isempty(kernel)
         error('run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta: kernel calculation failed');
     end
@@ -301,13 +317,13 @@ for wt = 'RL'
 end
 end
 
-function c = predict(model, periods, wavetype, nmode)
-% phase velocities for the TI model
+function c = predict(model, periods, wavetype, nmode, fref)
+% phase velocities for the TI model (Q-corrected if the model has Qp, Qs)
 c = nan(length(periods),1);
 I_R = find(wavetype == 'R');
 I_L = find(wavetype == 'L');
-if ~isempty(I_R); c(I_R) = dispR_surf96_TI(periods(I_R), model(:,1:7), nmode); end
-if ~isempty(I_L); c(I_L) = dispL_surf96_TI(periods(I_L), model(:,1:7), nmode); end
+if ~isempty(I_R); c(I_R) = dispR_surf96_TI(periods(I_R), model, nmode, 'C', fref); end
+if ~isempty(I_L); c(I_L) = dispL_surf96_TI(periods(I_L), model, nmode, 'C', fref); end
 end
 
 function m = model2vec(model)

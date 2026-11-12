@@ -37,6 +37,14 @@ addpath('./functions/')
 %% Data to invert
 data_types = 'RL'; % 'RL' = Rayleigh + Love, 'R' = Rayleigh only, 'L' = Love only
 
+%% Attenuation
+% use_Q = 1: include Qp and Qs (from the card's Qkappa and Qmu) in the true
+% and starting models, so that the synthetic data, the forward
+% calculations and the kernels include the causal (physical dispersion)
+% correction. Q is held fixed (not inverted). use_Q = 0: elastic.
+use_Q = 0;
+fref = 1; % [Hz] reference frequency of the Q model
+
 %% Inversion regularization parameters
 eps_data = 1; % data fit
 eps_H = 0.005; % norm damping
@@ -73,7 +81,7 @@ cardname = 'Nomelt_taper_eta_crust_INVpconstr_xi1.06_GRL19_Line1_dist100.00km';
 
 % Get MINEOS model [H Vpv Vsv rho Vph Vsh eta]
 CARD = ['./MINEOS_CARD/',cardname,'.card'];
-[truemod, discs] = card2mod_TI(CARD,zmax); % true model
+[truemod, discs] = card2mod_TI(CARD,zmax,use_Q); % true model ([... Qp Qs] if use_Q)
 % eta ~= 1 in the half-space can give spurious Rayleigh roots in tdisp96
 % (see check_halfspace_eta_TI.m)
 truemod(end,7) = 1;
@@ -102,13 +110,13 @@ for wt = data_types
 end
 cobs = zeros(size(periods));
 I_R = wavetype=='R'; I_L = wavetype=='L';
-if any(I_R); cobs(I_R) = dispR_surf96_TI(periods(I_R),truemod,nmode); end % "observations"
-if any(I_L); cobs(I_L) = dispL_surf96_TI(periods(I_L),truemod,nmode); end
+if any(I_R); cobs(I_R) = dispR_surf96_TI(periods(I_R),truemod,nmode,'C',fref); end % "observations"
+if any(I_L); cobs(I_L) = dispL_surf96_TI(periods(I_L),truemod,nmode,'C',fref); end
 cstd = cobs * 0.01; % observation uncertainties
 
 %% Starting model
 % load starting model
-[startmod, discs] = card2mod_TI(CARD,zmax);
+[startmod, discs] = card2mod_TI(CARD,zmax,use_Q);
 startmod(end,7) = 1; % eta = 1 in the half-space (as for the true model)
 % Break the smoothing at the discontinuities of the card (water bottom,
 % sediments, Moho). Smoothing across the Moho prevents the inversion from
@@ -117,14 +125,14 @@ startmod(end,7) = 1; % eta = 1 in the half-space (as for the true model)
 
 figure(1); clf; set(gcf,'position',[50 50 1200 600]);
 plot_model_TI({startmod, truemod}, {'start','true'}, zmax);
-subplot(1,4,1); title('Starting and true models');
+subplot(1,4+use_Q,1); title('Starting and true models');
 
 %% Do linearized inversion using the CPS TI programs
 cstart = zeros(size(periods));
-if any(I_R); cstart(I_R) = dispR_surf96_TI(periods(I_R),startmod,nmode); end % "predictions"
-if any(I_L); cstart(I_L) = dispL_surf96_TI(periods(I_L),startmod,nmode); end
+if any(I_R); cstart(I_R) = dispR_surf96_TI(periods(I_R),startmod,nmode,'C',fref); end % "predictions"
+if any(I_L); cstart(I_L) = dispL_surf96_TI(periods(I_L),startmod,nmode,'C',fref); end
 
-[finalmod, cpre, unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cstd,periods,wavetype,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,eps_xi,eps_eta,z_dampbot,nit,nit_recalc_c,nmode,1,vsv_thresh_xi);
+[finalmod, cpre, unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cstd,periods,wavetype,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,eps_xi,eps_eta,z_dampbot,nit,nit_recalc_c,nmode,1,vsv_thresh_xi,fref);
 
 %% Plot final kernels
 lgd = {};
@@ -134,7 +142,7 @@ flds = {'dcdvsv','dcdvsh','dcdvpv','dcdvph','dcdrho','dcdeta'};
 xl = {'dc/dVsv','dc/dVsh','dc/dVpv','dc/dVph','dc/d\rho','dc/d\eta'};
 for iw = 1:length(data_types)
     wt = data_types(iw);
-    kernel = calc_kernel96_TI(finalmod, vec_T, wt, 1, 0, nmode);
+    kernel = calc_kernel96_TI(finalmod, vec_T, wt, 1, 0, nmode, fref);
     figure(100+iw); clf;
     set(gcf,'position',[100 100 1500 450],'color','w')
     for k = 1:6
