@@ -122,9 +122,14 @@ eps_F0 = eps_F*NA/NR;
 ind_dampstart = find(z > z_dampbot);
 H00(ind_dampstart,ind_dampstart) = H00(ind_dampstart,ind_dampstart).*linspace(1,1000,length(ind_dampstart));
 h0(ind_dampstart) = h0(ind_dampstart).*linspace(1,1000,length(ind_dampstart))';
-% Kill water layers
+% Kill water layers: large weight relative to the data kernel norm NA (net
+% weight eps_large*NA once H00 is multiplied by eps_H0, as in
+% run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta.m; was an absolute 1e9 assigned
+% to the whole water sub-block)
+eps_large = 1e4;
 ind_h2o = find(startmod(:,3)==0);
-H00(ind_h2o,ind_h2o) = 1e9;
+H00(ind_h2o,ind_h2o) = H00(ind_h2o,ind_h2o)*eps_large*NA/eps_H0;
+h0(ind_h2o) = h0(ind_h2o)*eps_large*NA/eps_H0;
 
 % combine all constraints
 H = [H00*eps_H0; J00*eps_J0; F00*eps_F0];

@@ -53,7 +53,9 @@ elseif length(varargin)==1
     fref = varargin{1};
 end
 
-eps_large = 1e9; % large weight to force constraint equation
+eps_large = 1e4; % large weight to force constraint equations, relative to the data kernel norm NA
+% (jbrussell 11/2026: was an absolute weight of 1e9, which made F'F
+% ill-conditioned; now scaled as in run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta.m)
 
 % Calculate kernels for G matrix using SURF96
 ifnorm = 0; % for plotting only
@@ -103,14 +105,16 @@ eps_F0 = eps_F*NA/NR;
 ind_dampstart = find(z > z_dampbot);
 H00(ind_dampstart,ind_dampstart) = H00(ind_dampstart,ind_dampstart).*linspace(1,1000,length(ind_dampstart));
 h0(ind_dampstart) = h0(ind_dampstart).*linspace(1,1000,length(ind_dampstart))';
-% Kill water layers
+% Kill water layers (net weight eps_large*NA once H00 is multiplied by eps_H0)
+w_large = eps_large*NA/eps_H0;
 ind_h2o = find(startmod(:,3)==0);
-H00(ind_h2o,ind_h2o) = H00(ind_h2o,ind_h2o)*eps_large;
-h0(ind_h2o) = h0(ind_h2o)*eps_large;
+H00(ind_h2o,ind_h2o) = H00(ind_h2o,ind_h2o)*w_large;
+h0(ind_h2o) = h0(ind_h2o)*w_large;
 % Damp crust to starting model
 ind_cr = find(startmod(:,2)<7);
-H00(ind_cr,ind_cr) = H00(ind_cr,ind_cr)*eps_large;
-h0(ind_cr) = h0(ind_cr)*eps_large;
+ind_cr = setdiff(ind_cr, ind_h2o); % water is already fixed above
+H00(ind_cr,ind_cr) = H00(ind_cr,ind_cr)*w_large;
+h0(ind_cr) = h0(ind_cr)*w_large;
 % J00 = break_constraint(J00, z, z(ind_cr(end)));
 % F00 = break_constraint(F00, z, z(ind_cr(end)));
 
@@ -143,8 +147,8 @@ end
 rho_h2o_vec = 1.03 * ones(length(ind_h2o),1);
 
 % combine all constraints
-H = [H00*eps_H0; J00*eps_J0; F00*eps_F0; VP_VS_mat*eps_vpvs0; RHO_VS_mat*eps_rhovs0; VP_h2o_mat*eps_large; RHO_h2o_mat*eps_large];
-h = [h0*eps_H0; j0*eps_J0; f0*eps_F0; vp_vs_vec*eps_vpvs0; rho_vs_vec*eps_rhovs0; vp_h2o_vec*eps_large; rho_h2o_vec*eps_large];
+H = [H00*eps_H0; J00*eps_J0; F00*eps_F0; VP_VS_mat*eps_vpvs0; RHO_VS_mat*eps_rhovs0; VP_h2o_mat*eps_large*NA; RHO_h2o_mat*eps_large*NA];
+h = [h0*eps_H0; j0*eps_J0; f0*eps_F0; vp_vs_vec*eps_vpvs0; rho_vs_vec*eps_rhovs0; vp_h2o_vec*eps_large*NA; rho_h2o_vec*eps_large*NA];
 
 % Data vector
 cstart = dispR_surf96(periods,startmod,nmode,'C',fref); % "predictions";
