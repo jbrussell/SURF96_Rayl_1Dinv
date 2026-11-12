@@ -109,6 +109,39 @@ raised alongside Vsh, so φ = 1/ξ) is recovered well with 10–40 s R + L data
   prevents fitting the short-period data, and weak damping then puts the
   misfit into an oscillating ξ (1.16 at 80 km, 0.97 at 50 km).
 
+> **Fix (November 2026): `break_constraint.m`.** For the second-derivative
+> smoothing, it removed three equations at each break, including one that
+> lies entirely below the break. The first layer below each break (e.g. the
+> uppermost mantle) then had no smoothing and could take a large spurious
+> velocity jump. Now only the two equations that cross the break are
+> removed. This affects all inversions that break the smoothing
+> (isotropic and TI).
+
+### Oceanic LVZ tests (10–150 s)
+
+- `test_kernel_inversion_vsvh_vpvh_rho_eta_LVZ.m`: true model = the
+  starting card plus a fast lid, a strong Gaussian LVZ (Vsv ≈ 4.0 km/s at
+  ~135 km) and ξ = 1.10 tapering to 1 at 220 km.
+- `test_kernel_inversion_vsvh_vpvh_rho_eta_PA5.m`: true model = PA5
+  (Gaherty et al., 1999; `MINEOS_CARD/pa5_5km.card`), starting model with
+  a smooth isotropic mantle (no lid, LVZ or 68/166 km discontinuities).
+
+Each script plots the R and L kernels in the starting and true models and
+compares three inversions: kernels recalculated every iteration, kernels
+fixed at the starting model, and a control with the same ξ but no LVZ.
+Results (noise-free data, 1% uncertainties):
+- **Synthetic LVZ:** with updated kernels, ξ is recovered to within 0.01 at
+  22–260 km, as well as without the LVZ. Fixed kernels move the anisotropy
+  too deep (ξ too low in the lid, +0.02 to +0.03 at 140–220 km). The LVZ
+  mainly changes the Rayleigh sensitivity to ξ, which grows and moves into
+  the LVZ.
+- **PA5:** the thin crust and the fast lid make the 10–30 s mode-0 Love
+  wave an LVZ-trapped mode (the crust/lid Love wave is on the mode-1
+  branch). The mode-0 Love data then constrain the lid poorly. ξ in the lid
+  is not recovered (1.01 vs 1.08 at 12–68 km) and the anisotropy is moved
+  below 166 km (1.05 vs 1.00), whether or not the kernels are updated.
+  The no-LVZ control recovers the lid ξ (1.06).
+
 Extending the periods to 100 s improves ξ below ~100 km. The final figure compares the true, starting and recovered Vsv,
 Vsh, Vpv, Vph, ρ, η and ξ with formal 1σ uncertainties.
 `card2mod_TI.m` converts a MINEOS card to the TI layered model format.
