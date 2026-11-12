@@ -9,7 +9,7 @@
 % 	model:    TI model [H Vpv Vsv rho Vph Vsh eta] or [... Qp Qs]
 %             (see writemod_surf96_TI.m; Qp=1000, Qs=200 if not given)
 %   wavetype: 'R' or 'L'
-%   nmode:    mode branch (0 = fund.)
+%   nmode:    mode branch (0 = fund.), or 'maxamp' (see below)
 %   fref:     reference frequency of Q model (Hz)
 %
 % eig:   output of read_der96_TI.m at the requested periods (in the order
@@ -52,6 +52,24 @@
 % A TI:spuriousRoot warning is issued whenever roots are discarded or
 % repaired; disable it with warning('off','TI:spuriousRoot').
 %
+% MAXIMUM SURFACE AMPLITUDE BRANCH (nmode = 'maxamp' or 'maxampN')
+% Modes are numbered by phase velocity. In models with a low-velocity
+% waveguide (e.g. a thin oceanic crust over a fast lid and an LVZ, such as
+% PA5) the slowest mode at short periods can be trapped at depth and
+% barely reach the surface, while the wave that dominates the surface
+% records is mode 1 (mode osculation). With nmode = 'maxamp', at each
+% period the branch among modes 0..N (N = 2 by default, 'maxampN' for
+% another N) with the largest surface amplitude for a source and a
+% receiver at the top of the solid (sea floor) is selected:
+%   Love:     AL * ut(top)^2      Rayleigh: AR * uz(top)^2
+% (AL, AR = 1/(2 c U I0) are the CPS energy factors; the product does not
+% depend on the arbitrary eigenfunction amplitude). The neighbors at
+% w(1+-dw_frac) are taken from the same branch. eig.mode then holds the
+% selected mode number at each period. The selection can change from one
+% model to the next (e.g. between inversion iterations), so the phase
+% velocity is not a smooth function of the model where two branches have
+% similar amplitudes.
+%
 % Q
 % CPS is always run with Q^-1 = 0. tregn96/tlegn96 correct the phase
 % velocity for causal (physical) dispersion but not the group velocity,
@@ -83,6 +101,23 @@ NEXTRA = 2;         % extra roots to compute in case some are discarded
 wavetype = upper(wavetype);
 vec_T = vec_T(:)';
 Nper = length(vec_T);
+
+% mode selection: fixed branch number, or the branch with the largest
+% surface amplitude among modes 0..nmax_amp
+maxamp = ischar(nmode);
+if maxamp
+    if ~strncmpi(nmode,'maxamp',6)
+        error('calc_der96_TI: nmode must be a mode number or ''maxamp''');
+    end
+    nmax_amp = 2;
+    if length(nmode) > 6
+        nmax_amp = str2double(nmode(7:end));
+    end
+    nsearch = nmax_amp; % highest mode number needed
+else
+    nsearch = nmode;
+end
+isol = find(model(:,3) > 0, 1); % top of the solid (sea floor) for 'maxamp'
 
 cleanup_cps96_TI(); % clean up
 
@@ -148,7 +183,7 @@ for k = 1:Nall
     fprintf(fid,'%.8f\n',T_all(k));
     fclose(fid);
     % run tprep96 to generate dispersion control file (outputs tdisp96.dat)
-    [st1, log] = system([timeoutstr,'tprep96 -M start.mod -NMOD ',num2str(nmode+1+NEXTRA),' -',wavetype,' -PARR periods.txt']);
+    [st1, log] = system([timeoutstr,'tprep96 -M start.mod -NMOD ',num2str(nsearch+1+NEXTRA),' -',wavetype,' -PARR periods.txt']);
     % run tdisp96 to generate dispersion binary file (outputs tdisp96.ray or tdisp96.lov)
     [st2, log] = system([timeoutstr,'tdisp96',tdispopt]);
     % calculate eigenfunctions and partial derivatives (outputs tregn96.der or tlegn96.der)
@@ -201,6 +236,7 @@ selp.iper = ones(1,Nper); selp.imode = nan(1,Nper);
 selm.iper = ones(1,Nper); selm.imode = nan(1,Nper);
 nspurious = zeros(1,Nper);
 repaired = false(1,Nper);
+modesel = nan(1,Nper); % selected mode number at each period
 
 for ii = 1:Nper
     w = 2*pi/vec_T(ii);
@@ -243,12 +279,34 @@ for ii = 1:Nper
     [~, Is] = sort(br(:,1));
     br = br(Is,:);
     good = find(isnan(br(:,2)) | br(:,2) > 0);
-    if numel(good) < nmode+1
-        nspurious(ii) = ndz + sum(br(:,2) < 0);
-        continue
+    if maxamp
+        ncand = min(numel(good), nmax_amp+1);
+        if ncand == 0
+            nspurious(ii) = ndz + sum(br(:,2) < 0);
+            continue
+        end
+        exc = nan(1,ncand);
+        for jc = 1:ncand
+            bc = br(good(jc),:);
+            if ~isnan(bc(2))
+                exc(jc) = surfamp(eig_all{iz}, jz(bc(2)), wavetype, isol);
+            else % missed at w: mean of the neighbors
+                exc(jc) = mean([surfamp(eig_all{im}, jm(bc(3)), wavetype, isol), ...
+                                surfamp(eig_all{ip}, jp(bc(4)), wavetype, isol)]);
+            end
+        end
+        [~, isel] = max(exc);
+        nsel = isel - 1;
+    else
+        if numel(good) < nmode+1
+            nspurious(ii) = ndz + sum(br(:,2) < 0);
+            continue
+        end
+        nsel = nmode;
     end
-    b = br(good(nmode+1),:);
-    nspurious(ii) = sum(br(1:good(nmode+1),2) < 0) + ndz;
+    modesel(ii) = nsel;
+    b = br(good(nsel+1),:);
+    nspurious(ii) = sum(br(1:good(nsel+1),2) < 0) + ndz;
     if ~isnan(b(2))
         sel0.imode(ii) = jz(b(2)) - 1;
     else
@@ -264,7 +322,11 @@ eig_m = pickroots(eig_all, selm, size(model,1));
 eig.periods = vec_T;
 eig_p.periods = vec_T/(1+dw_frac);
 eig_m.periods = vec_T/(1-dw_frac);
-eig.mode = nmode; eig_p.mode = nmode; eig_m.mode = nmode;
+if maxamp
+    eig.mode = modesel; eig_p.mode = modesel; eig_m.mode = modesel;
+else
+    eig.mode = nmode; eig_p.mode = nmode; eig_m.mode = nmode;
+end
 
 % Rebuild roots missed at the requested frequency from the two neighbors
 if any(repaired)
@@ -320,6 +382,20 @@ end
 
 cleanup_cps96_TI();
 
+end
+
+function a = surfamp(e, j, wavetype, isol)
+% surface amplitude (source and receiver at the top of the solid) of root j
+% (1-based CPS root index) in the per-period output e:
+% AL*ut(top)^2 (Love) or AR*uz(top)^2 (Rayleigh)
+if isempty(e) || j > length(e.amp)
+    a = NaN; return
+end
+if strcmp(wavetype,'L')
+    a = e.amp(j) * e.ut(isol,j)^2;
+else
+    a = e.amp(j) * e.uz(isol,j)^2;
+end
 end
 
 function eig = applyQ(eig, model, qa, qb, fref)
