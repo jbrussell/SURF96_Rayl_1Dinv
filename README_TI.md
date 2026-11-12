@@ -141,6 +141,22 @@ Results (noise-free data, 1% uncertainties):
   is not recovered (1.01 vs 1.08 at 12–68 km) and the anisotropy is moved
   below 166 km (1.05 vs 1.00), whether or not the kernels are updated.
   The no-LVZ control recovers the lid ξ (1.06).
+- **PA5, two stages** (`test_kernel_inversion_vsvh_vpvh_rho_eta_PA5_twostage.m`):
+  first invert the Rayleigh data alone for an isotropic model (ξ held at
+  1), which recovers the LVZ in Vsv, then use it as the starting model for
+  the R + L inversion. The lid ξ improves from 1.01 to 1.05 (true 1.08), and
+  the spurious ξ below 166 km drops from 1.05 to 1.02. This is nearly as
+  good as starting from the true Vsv (lid ξ 1.06). The remaining error is
+  the vertical smoothing of a sharp ξ profile.
+- **Which Love branch is observed in PA5?** For a source and a receiver near
+  the surface, the surface amplitude of the mode-1 Love wave (crust and lid)
+  exceeds that of mode 0 (LVZ-trapped) by ×800 at 10 s, ×17 at 20 s and ×2
+  at 40 s; they are comparable at 50–60 s and mode 0 dominates above
+  ~70 s. Their group velocities are similar (4.45–4.56 km/s at 15–60 s), so
+  they cannot be separated by time windowing. In such a model, a measured
+  "fundamental-mode" Love wave below ~40 s is the mode-1 branch of the
+  CPS numbering. The forward problem must follow the branch that is
+  measured.
 
 Extending the periods to 100 s improves ξ below ~100 km. The final figure compares the true, starting and recovered Vsv,
 Vsh, Vpv, Vph, ρ, η and ξ with formal 1σ uncertainties.
