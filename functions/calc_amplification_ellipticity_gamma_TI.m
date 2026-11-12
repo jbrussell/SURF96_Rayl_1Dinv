@@ -12,6 +12,8 @@
 %   wavetype: Rayleigh (R) or Love (L)
 %   nmode: mode branch of interest (0 = fund.) (OPTIONAL, default 0)
 %   fref: reference frequency of Q model in Hz (OPTIONAL, default 1)
+%   opts: (OPTIONAL) options passed to calc_der96_TI.m, e.g. opts.nmodes =
+%         number of modes computed by tdisp96 (default nmode+1)
 %
 % Output structure (same fields as the isotropic version):
 %   disper.period, disper.phv, disper.grv, disper.gamma
@@ -36,13 +38,17 @@ if nargin==3
 elseif nargin==4
 	nmode = varargin{1};
     fref = 1; % default, reference frequency
-elseif nargin==5
+elseif nargin>=5
     nmode = varargin{1};
     fref = varargin{2}; % reference frequency
 end
+opts = struct();
+if nargin >= 6 && ~isempty(varargin{3})
+    opts = varargin{3};
+end
 wavetype = upper(wavetype);
 
-eig = calc_der96_TI(vec_T,model,wavetype,nmode,fref);
+eig = calc_der96_TI(vec_T,model,wavetype,nmode,fref,opts);
 
 disper.period = eig.periods;
 disper.phv = eig.phv;     % phase velocity km/s

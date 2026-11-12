@@ -12,6 +12,8 @@ function [kernel, dispersion] = calc_anelastic_kernel96_TI(model, vec_T, wavetyp
 % ifplot: whether to plot the kernel
 % nmode: 0 for fund. mode; 1 for 1st overtone, etc. (OPTIONAL, default 0)
 % fref: reference frequency (Hz) of the constant-Q model (OPTIONAL, default 1)
+% opts: (OPTIONAL) passed to calc_kernel96_TI.m (opts.phase_only: no dU
+%       kernels; opts.nmodes: number of modes computed by tdisp96)
 %
 % METHOD
 % CPS has no TI version of srfker96, so the anelastic correction applied by
@@ -52,9 +54,13 @@ if nargin == 5
 elseif nargin == 6
     nmode = varargin{1};
     fref = 1; % default reference frequency
-elseif nargin == 7
+elseif nargin >= 7
     nmode = varargin{1};
     fref = varargin{2};
+end
+opts = struct();
+if nargin >= 8 && ~isempty(varargin{3})
+    opts = varargin{3}; % passed to calc_kernel96_TI (phase_only, nmodes)
 end
 wavetype = upper(wavetype);
 
@@ -63,7 +69,7 @@ Nper = length(vec_T);
 nlayer = size(model,1);
 
 % Elastic kernels (not normalized)
-[kel, disp_el] = calc_kernel96_TI(model(:,1:7), vec_T, wavetype, 0, 0, nmode);
+[kel, disp_el] = calc_kernel96_TI(model(:,1:7), vec_T, wavetype, 0, 0, nmode, 1, opts);
 if isempty(kel)
     disp('Something went wrong calculating kernels');
     kernel = []; dispersion = [];

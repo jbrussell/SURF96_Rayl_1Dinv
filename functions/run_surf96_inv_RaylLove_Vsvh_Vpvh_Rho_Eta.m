@@ -1,5 +1,5 @@
 function [finalmod,cpre,unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cstd,periods,wavetype,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,eps_xi,eps_eta,z_dampbot,nit,nit_recalc_c,nmode,varargin)
-% [finalmod,cpre,unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(..., nmode, isfigure, vsv_thresh_xi, fref)
+% [finalmod,cpre,unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(..., nmode, isfigure, vsv_thresh_xi, fref, nit_recalc_G, nmodes)
 % Do linearized inversion of Rayleigh and/or Love wave phase velocities for
 % a transversely isotropic (radially anisotropic) model: Vsv, Vsh, Vpv,
 % Vph, density (rho) and eta, using the CPS TI programs (via the *_TI
@@ -49,13 +49,28 @@ function [finalmod,cpre,unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cs
 % eps_eta - weight for damping eta to the starting model as fraction of G norm [scalar]
 % z_dampbot - depth below which to damp to starting model (km) [scalar]
 % nit - number of iterations [scalar]
-% nit_recalc_c - number of iterations after which to recalculate phase
-%                velocity and kernels [scalar]
+% nit_recalc_c - number of iterations after which to recalculate the phase
+%                velocities (otherwise the linearized prediction G*dm is
+%                used) [scalar]
 % nmode - mode number (0 = fundamental) [scalar]
 % isfigure - plot the progress of the inversion (OPTIONAL, default 1)
 % vsv_thresh_xi - hold xi at the starting model where 0 < Vsv < vsv_thresh_xi
 %                 (km/s) in the starting model (OPTIONAL, default 0 = off)
 % fref - reference frequency (Hz) of the Q model (OPTIONAL, default 1)
+% nit_recalc_G - number of iterations after which to recalculate the
+%                kernels (OPTIONAL, default nit_recalc_c)
+% nmodes - number of modes computed by tdisp96 at each period (OPTIONAL,
+%          default nmode+1, or N+1 for nmode = 'maxampN'; see calc_der96_TI.m)
+%
+% COST: the phase velocities and kernels are computed with the CPS TI
+% programs; tdisp96 (Rayleigh waves especially) takes nearly all the time.
+% - When the kernels are recalculated, the phase velocities come from the
+%   same calculation (calc_kernel96_TI with opts.phase_only: 2 frequencies
+%   per period, no group-velocity kernels).
+% - When only the phase velocities are recalculated, the linearized
+%   prediction is used to pick the root at each period (calc_der96_TI with
+%   opts.c_guess: 1 frequency per period, with a fallback to the full root
+%   validation where no root is within 2% of the prediction).
 %
 % OUTPUTS
 % finalmod - final TI model [H Vpv Vsv rho Vph Vsh eta] [M x 7]
@@ -86,6 +101,14 @@ fref = 1;
 if length(varargin) >= 3 && ~isempty(varargin{3})
     fref = varargin{3};
 end
+nit_recalc_G = nit_recalc_c;
+if length(varargin) >= 4 && ~isempty(varargin{4})
+    nit_recalc_G = varargin{4};
+end
+nmodes = []; % default set by calc_der96_TI.m (nmode+1, or N+1 for nmode = 'maxampN')
+if length(varargin) >= 5 && ~isempty(varargin{5})
+    nmodes = varargin{5};
+end
 if ~any(size(startmod,2) == [7 9])
     error('startmod must have 7 columns [H Vpv Vsv rho Vph Vsh eta] or 9 columns [... Qp Qs]');
 end
@@ -107,7 +130,8 @@ z = cumsum(startmod(:,1)); % bottom of each layer (km)
 zmid = z - startmod(:,1)/2; zmid(end) = z(end-1);
 
 % Kernels for the G matrix
-G = build_G(startmod, periods, wavetype, nmode, fref);
+% kernels and phase velocities of the starting model (one calculation)
+[G, cstart] = build_G(startmod, periods, wavetype, nmode, fref, nmodes);
 
 % Data weighting
 W = diag(1./cstd);
@@ -202,7 +226,9 @@ h = [hd*eps_H0; jd*eps_J0; fd*eps_F0; zeros(3*length(ind_solid),1); ...
      zeros(length(ind_solid),1); eta_vec*eps_eta0; w_h2o*eps_large*NA];
 
 % Data vector
-cstart = predict(startmod, periods, wavetype, nmode, fref);
+if any(isnan(cstart))
+    error('run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta: %d phase velocities of the starting model could not be calculated', sum(isnan(cstart)));
+end
 cpre = cstart;
 
 % Least squares inversion
@@ -244,16 +270,22 @@ for ii = 1:nit
     unc.rho_std = m_std(4*nlayer+1:5*nlayer);
     unc.eta_std = m_std(5*nlayer+1:6*nlayer);
 
-    if mod(ii,nit_recalc_c)==0 && ii < nit
-        % recalculate phase velocities and kernels for the current model
-        cnew = predict(premod, periods, wavetype, nmode, fref);
+    do_c = mod(ii,nit_recalc_c)==0 && ii < nit; % recalculate phase velocities
+    do_G = mod(ii,nit_recalc_G)==0 && ii < nit; % recalculate kernels
+    if do_G
+        % kernels (and phase velocities, from the same calculation)
+        [G, cnew] = build_G(premod, periods, wavetype, nmode, fref, nmodes);
+    elseif do_c
+        % phase velocities only, using the linearized prediction to pick roots
+        cnew = predict(premod, periods, wavetype, nmode, fref, nmodes, cpre);
+    end
+    if do_c
         inan = isnan(cnew);
         if any(inan)
             warning('run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta: %d phase velocities could not be calculated; keeping the linearized prediction there', sum(inan));
             cnew(inan) = cpre(inan);
         end
         cpre = cnew;
-        G = build_G(premod, periods, wavetype, nmode, fref);
     end
 
     if isfigure
@@ -290,25 +322,30 @@ for ii = 1:nit
 end
 
 finalmod = premod;
-cpre = predict(finalmod, periods, wavetype, nmode, fref);
+cpre = predict(finalmod, periods, wavetype, nmode, fref, nmodes, cpre);
 
 end
 
 %% ------------------------------------------------------------------------
-function G = build_G(model, periods, wavetype, nmode, fref)
+function [G, c] = build_G(model, periods, wavetype, nmode, fref, nmodes)
 % phase-velocity kernels [N x 6M] for m = [Vsv; Vsh; Vpv; Vph; Rho; Eta]
-% (Q-corrected kernels if the model has Qp, Qs columns)
+% and the phase velocities c [N x 1] from the same calculation
+% (Q-corrected if the model has Qp, Qs columns)
 N = length(periods);
 nlayer = size(model,1);
 G = zeros(N, 6*nlayer);
+c = nan(N,1);
+kopts.phase_only = true; % no group-velocity kernels: 2 frequencies per period
+kopts.nmodes = nmodes;
 flds = {'dcdvsv','dcdvsh','dcdvpv','dcdvph','dcdrho','dcdeta'};
 for wt = 'RL'
     I_w = find(wavetype == wt);
     if isempty(I_w); continue; end
-    kernel = calc_kernel96_TI(model, periods(I_w), wt, 0, 0, nmode, fref);
+    [kernel, dispersion] = calc_kernel96_TI(model, periods(I_w), wt, 0, 0, nmode, fref, kopts);
     if isempty(kernel)
         error('run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta: kernel calculation failed');
     end
+    c(I_w) = dispersion.phv(:);
     for k = 1:6
         K = kernel.(flds{k});
         K(isnan(K)) = 0; % mode does not exist at this period
@@ -317,13 +354,22 @@ for wt = 'RL'
 end
 end
 
-function c = predict(model, periods, wavetype, nmode, fref)
-% phase velocities for the TI model (Q-corrected if the model has Qp, Qs)
+function c = predict(model, periods, wavetype, nmode, fref, nmodes, c_guess)
+% phase velocities for the TI model (Q-corrected if the model has Qp, Qs).
+% c_guess (expected phase velocities, e.g. the linearized prediction) is
+% used to pick the root at each period (see calc_der96_TI.m, opts.c_guess)
 c = nan(length(periods),1);
-I_R = find(wavetype == 'R');
-I_L = find(wavetype == 'L');
-if ~isempty(I_R); c(I_R) = dispR_surf96_TI(periods(I_R), model, nmode, 'C', fref); end
-if ~isempty(I_L); c(I_L) = dispL_surf96_TI(periods(I_L), model, nmode, 'C', fref); end
+for wt = 'RL'
+    I_w = find(wavetype == wt);
+    if isempty(I_w); continue; end
+    dopts.nmodes = nmodes;
+    dopts.c_guess = c_guess(I_w);
+    if wt == 'R'
+        c(I_w) = dispR_surf96_TI(periods(I_w), model, nmode, 'C', fref, dopts);
+    else
+        c(I_w) = dispL_surf96_TI(periods(I_w), model, nmode, 'C', fref, dopts);
+    end
+end
 end
 
 function m = model2vec(model)

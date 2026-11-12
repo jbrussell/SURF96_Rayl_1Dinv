@@ -10,6 +10,9 @@
 %   nmode: 0=fund. 1=1st, ... etc. (OPTIONAL, defaults to fund.)
 %   disp_type: 'C'=phase veloc. 'U'=group veloc (OPTIONAL, defaults to C)
 %   fref: reference frequency for Q (OPTIONAL, defaults to 1 Hz)
+%   opts: (OPTIONAL) options passed to calc_der96_TI.m: opts.nmodes =
+%         number of modes computed by tdisp96 (default nmode+1), and
+%         opts.c_guess = expected phase velocities (faster; see calc_der96_TI.m)
 %
 % Periods at which the requested mode does not exist are returned as NaN.
 %
@@ -47,6 +50,17 @@ function phv = dispL_surf96_TI(vec_T,model,varargin)
             error('disp_type must be C or U');
         end
         fref = varargin{3};
+    elseif nargin==6
+        nmode = varargin{1};
+        disp_type = upper(varargin{2});
+        if ~(strcmp(disp_type,'C') || strcmp(disp_type,'U'))
+            error('disp_type must be C or U');
+        end
+        fref = varargin{3};
+    end
+    opts = struct();
+    if nargin >= 6 && ~isempty(varargin{4})
+        opts = varargin{4};
     end
 
 vec_T = vec_T(:);
@@ -63,7 +77,7 @@ phv = NaN(n_requested, 1);
 try
     % Dispersion is read from the binary eigenfunction file, which carries
     % full single precision (the tdpegn96 ASCII table has only 4 decimals)
-    disper = calc_eigenfunctions96_TI(vec_T,model,'L',nmode,fref);
+    disper = calc_eigenfunctions96_TI(vec_T,model,'L',nmode,fref,opts);
 catch
     disper = [];
 end

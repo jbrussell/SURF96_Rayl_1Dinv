@@ -177,7 +177,18 @@ Results (noise-free data, 1% uncertainties):
   reproduced. The lid ξ improves (1.05 for both, vs 1.01 one-stage with
   mode 0), but ξ is too high in and below the LVZ (1.05–1.06 at 166–220 km).
 
-Extending the periods to 100 s improves ξ below ~100 km. The final figure compares the true, starting and recovered Vsv,
+Extending the periods to 100 s improves ξ below ~100 km.
+
+**Speed.** Each iteration computes the kernels and phase velocities
+together in one CPS calculation. The kernels are phase-velocity only, so
+two frequencies per period are computed instead of three, and only the
+modes needed are computed (`nmodes`, default `nmode+1`).
+`nit_recalc_G` (default `nit_recalc_c`) sets how often the kernels are
+recalculated, independently of the phase velocities (`nit_recalc_c`). When
+only the phase velocities are recalculated, the linearized prediction is
+used to pick the root, so one frequency per period is computed. For the
+synthetic test this cut the run time by about 3.6× with bit-identical
+results. The final figure compares the true, starting and recovered Vsv,
 Vsh, Vpv, Vph, ρ, η and ξ with formal 1σ uncertainties.
 `card2mod_TI.m` converts a MINEOS card to the TI layered model format.
 
@@ -266,9 +277,14 @@ spherical-earth phase velocity.
 3. **eta ≠ 1 in the half-space.** This can produce a spurious Rayleigh root
    at low phase velocity (e.g. ~1.4 km/s with an unphysical group velocity).
    `check_halfspace_eta_TI` warns about it. Use eta = 1 in the half-space.
-4. **Run time.** `tdisp96` (Rayleigh) is several times slower than
-   `sdisp96`, and three frequencies are computed for each requested
-   period. Expect a few seconds per call for ~40 layers and ~10–20 periods.
+4. **Run time.** `tdisp96` (Rayleigh) is about 4× slower than `sdisp96`
+   and takes nearly all of the time; `tprep96`, `tregn96`, reading the
+   output and launching the programs are negligible. By default,
+   `calc_der96_TI` computes three frequencies per period (two with
+   `opts.nfreq = 2` or `calc_kernel96_TI`'s `opts.phase_only`, one with
+   `opts.c_guess`). It also computes only the modes needed (`opts.nmodes`,
+   default `nmode+1`), and recomputes a period once with 2 more modes if no
+   valid root is found there (see `calc_der96_TI.m`).
 5. **Root precision.** `tdisp96` refines each root with only 15 bisection
    steps, so phase velocities are good to ~1e-5 to 1e-4 km/s. Use finite
    differences of `dispR_surf96_TI`/`dispL_surf96_TI` with care.

@@ -73,7 +73,9 @@ nmode = 0; % mode branch number (0=fund, 1=1st overtone, 2=2nd overtone, etc.)
 
 % Other inversion parameters
 nit = 8; % total number of iterations
-nit_recalc_c = 1; % number of iterations after which to recalculate phase velocity and kernels
+nit_recalc_c = 1; % number of iterations after which to recalculate the phase velocities
+nit_recalc_G = nit_recalc_c; % number of iterations after which to recalculate the kernels
+nmodes = nmode+1; % number of modes computed by tdisp96 (more can help when spurious roots occur; see calc_der96_TI.m)
 
 %% Generate the synthetic dataset for this test
 % Read in MINEOS model and convert to TI SURF96 layered model format
@@ -132,7 +134,7 @@ cstart = zeros(size(periods));
 if any(I_R); cstart(I_R) = dispR_surf96_TI(periods(I_R),startmod,nmode,'C',fref); end % "predictions"
 if any(I_L); cstart(I_L) = dispL_surf96_TI(periods(I_L),startmod,nmode,'C',fref); end
 
-[finalmod, cpre, unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cstd,periods,wavetype,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,eps_xi,eps_eta,z_dampbot,nit,nit_recalc_c,nmode,1,vsv_thresh_xi,fref);
+[finalmod, cpre, unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cstd,periods,wavetype,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,eps_xi,eps_eta,z_dampbot,nit,nit_recalc_c,nmode,1,vsv_thresh_xi,fref,nit_recalc_G,nmodes);
 
 %% Plot final kernels
 lgd = {};

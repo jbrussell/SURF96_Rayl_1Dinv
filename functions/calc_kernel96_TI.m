@@ -5,6 +5,7 @@ function [kernel, dispersion] = calc_kernel96_TI(model, vec_T, wavetype, ifnorm,
 % [kernel, dispersion] = calc_kernel96_TI(model, vec_T, wavetype, ifnorm, ifplot);
 % [kernel, dispersion] = calc_kernel96_TI(model, vec_T, wavetype, ifnorm, ifplot, nmode);
 % [kernel, dispersion] = calc_kernel96_TI(model, vec_T, wavetype, ifnorm, ifplot, nmode, fref);
+% [kernel, dispersion] = calc_kernel96_TI(model, vec_T, wavetype, ifnorm, ifplot, nmode, fref, opts);
 %
 % model: TI model [H Vpv Vsv rho Vph Vsh eta]  (see writemod_surf96_TI.m;
 %        use convert_iso2TI.m to convert an isotropic [H Vp Vs rho] model)
@@ -17,6 +18,11 @@ function [kernel, dispersion] = calc_kernel96_TI(model, vec_T, wavetype, ifnorm,
 % ifplot: whether to plot the kernel
 % nmode: 0 for fund. mode; 1 for 1st overtone, etc. (OPTIONAL, default 0)
 % fref: reference frequency (Hz) for Q (OPTIONAL, default 1; only used for anelastic)
+% opts: (OPTIONAL) structure:
+%   opts.phase_only = true: only the phase-velocity kernels are computed
+%       (the dU kernels are NaN). Two frequencies per period are computed
+%       instead of three (about 1.5x faster; see calc_der96_TI.m).
+%   opts.nmodes: number of modes computed by tdisp96 (default nmode+1)
 %
 % OUTPUT
 % kernel: structure of [nlayer x nperiod] layer kernels. Partial
@@ -58,9 +64,21 @@ if nargin == 5
 elseif nargin == 6
     nmode = varargin{1};
     fref = 1; % default reference frequency
-elseif nargin == 7
+elseif nargin >= 7
     nmode = varargin{1};
     fref = varargin{2};
+end
+opts = struct();
+if nargin >= 8 && ~isempty(varargin{3})
+    opts = varargin{3};
+end
+phase_only = isfield(opts,'phase_only') && ~isempty(opts.phase_only) && opts.phase_only;
+der_opts = struct();
+if isfield(opts,'nmodes'); der_opts.nmodes = opts.nmodes; end
+if phase_only
+    der_opts.nfreq = 2; % neighbor at w(1+dw_frac) only (root validation)
+else
+    der_opts.nfreq = 3; % w(1 +/- dw_frac) for the group-velocity kernels
 end
 wavetype = upper(wavetype);
 if strcmp(wavetype,'J')
@@ -69,7 +87,7 @@ end
 
 if size(model,2)>7 % if Qp and Qs provided, calculate the Q-corrected kernels
 
-    [kernel, dispersion] = calc_anelastic_kernel96_TI(model, vec_T, wavetype, ifnorm, ifplot, nmode, fref);
+    [kernel, dispersion] = calc_anelastic_kernel96_TI(model, vec_T, wavetype, ifnorm, ifplot, nmode, fref, opts);
     return
 
 end
@@ -82,7 +100,7 @@ nlayer = size(model,1);
 % the same mode branch at w(1+dw_frac) and w(1-dw_frac)
 model_e = [model(:,1:7), zeros(nlayer,2)];
 try
-    [eig, eig_p, eig_m, info] = calc_der96_TI(vec_T, model_e, wavetype, nmode, fref);
+    [eig, eig_p, eig_m, info] = calc_der96_TI(vec_T, model_e, wavetype, nmode, fref, der_opts);
 catch
     eig = [];
 end
@@ -106,7 +124,7 @@ end
 for ip = 1:Nper
     c = eig.phv(ip);
     U = eig.grv(ip);
-    if isnan(c)
+    if isnan(c) || phase_only
         continue
     end
     for ii = 1:length(params)
