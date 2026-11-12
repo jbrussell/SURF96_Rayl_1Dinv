@@ -10,12 +10,11 @@
 % 	model:    TI model [H Vpv Vsv rho Vph Vsh eta] or [... Qp Qs]
 %             (see writemod_surf96_TI.m; Qp=1000, Qs=200 if not given)
 %   wavetype: 'R' or 'L'
-%   nmode:    mode branch (0 = fund.), or 'maxamp' (see below)
+%   nmode:    mode branch (0 = fund.)
 %   fref:     reference frequency of Q model (Hz)
 %   opts:     (OPTIONAL) structure with any of the fields
 %     .nmodes  number of modes (roots) tdisp96 computes at each period
-%              (default nmode+1, i.e. 1 for the fundamental mode; N+1 for
-%              nmode = 'maxampN'). Periods
+%              (default nmode+1, i.e. 1 for the fundamental mode). Periods
 %              at which no valid root of branch nmode is found are computed
 %              again once with nmodes+2 (spurious roots can occupy a slot).
 %     .nfreq   frequencies computed per period: 3 = w, w(1+dw_frac),
@@ -28,9 +27,7 @@
 %              computed and the root closest to c_guess (within 2%) is
 %              selected; periods without such a root are computed again
 %              with nfreq = 2 and the full root validation. eig_p and eig_m
-%              are NaN. (With nmode = 'maxamp' this follows the branch of
-%              the guess; eig.mode is then the position of the selected
-%              root among the roots found.)
+%              are NaN.
 %
 % eig:   output of read_der96_TI.m at the requested periods (in the order
 %        requested; NaN where the mode does not exist)
@@ -66,32 +63,16 @@
 % spurious roots are off by several percent. A branch is accepted if it is
 % found consistently at at least two of the three frequencies; isolated
 % roots and duplicates are discarded. If an accepted branch was missed at
-% the requested frequency, its values there are rebuilt as the average of
-% the two neighbors (second-order accurate; eigenfunctions are first
+% the requested frequency, that period is first recomputed with
+% opts.nmodes+2 modes (a spurious root can push the genuine one past the
+% last computed mode); if it is still missed, its values there are rebuilt
+% as the average of the two neighbors (second-order accurate; eigenfunctions are first
 % brought to a common amplitude). The mode branch nmode is then selected
 % from the ordered list of accepted branches. Roots at the (flattened)
 % half-space S velocity, the upper end of the tdisp96 search range, where
 % it can report non-dispersive roots, are discarded.
 % A TI:spuriousRoot warning is issued whenever roots are discarded or
 % repaired; disable it with warning('off','TI:spuriousRoot').
-%
-% MAXIMUM SURFACE AMPLITUDE BRANCH (nmode = 'maxamp' or 'maxampN')
-% Modes are numbered by phase velocity. In models with a low-velocity
-% waveguide (e.g. a thin oceanic crust over a fast lid and an LVZ, such as
-% PA5) the slowest mode at short periods can be trapped at depth and
-% barely reach the surface, while the wave that dominates the surface
-% records is mode 1 (mode osculation). With nmode = 'maxamp', at each
-% period the branch among modes 0..N (N = 2 by default, 'maxampN' for
-% another N) with the largest surface amplitude for a source and a
-% receiver at the top of the solid (sea floor) is selected:
-%   Love:     AL * ut(top)^2      Rayleigh: AR * uz(top)^2
-% (AL, AR = 1/(2 c U I0) are the CPS energy factors; the product does not
-% depend on the arbitrary eigenfunction amplitude). The neighbors at
-% w(1+-dw_frac) are taken from the same branch. eig.mode then holds the
-% selected mode number at each period. The selection can change from one
-% model to the next (e.g. between inversion iterations), so the phase
-% velocity is not a smooth function of the model where two branches have
-% similar amplitudes.
 %
 % Q
 % CPS is always run with Q^-1 = 0. tregn96/tlegn96 correct the phase
@@ -131,30 +112,12 @@ opts = struct();
 if ~isempty(varargin) && isstruct(varargin{1})
     opts = varargin{1};
 end
-% mode selection: fixed branch number, or the branch with the largest
-% surface amplitude among modes 0..nmax_amp
-maxamp = ischar(nmode);
-nmax_amp = NaN;
-if maxamp
-    if ~strncmpi(nmode,'maxamp',6)
-        error('calc_der96_TI: nmode must be a mode number or ''maxamp''');
-    end
-    nmax_amp = 2;
-    if length(nmode) > 6
-        nmax_amp = str2double(nmode(7:end));
-    end
-    nsearch = nmax_amp; % highest mode number needed
-else
-    nsearch = nmode;
-end
-isol = find(model(:,3) > 0, 1); % top of the solid (sea floor) for 'maxamp'
-
-nmodes = nsearch + 1;
+nmodes = nmode + 1;
 if isfield(opts,'nmodes') && ~isempty(opts.nmodes)
     nmodes = opts.nmodes;
 end
-if nmodes < nsearch + 1
-    error('calc_der96_TI: opts.nmodes (%d) must be at least %d for this nmode', nmodes, nsearch+1);
+if nmodes < nmode + 1
+    error('calc_der96_TI: opts.nmodes (%d) must be at least nmode+1 (%d)', nmodes, nmode+1);
 end
 nfreq = 3;
 if isfield(opts,'nfreq') && ~isempty(opts.nfreq)
@@ -246,7 +209,7 @@ for ii = 1:Nper
 end
 
 % ---- Root selection ----
-sel = repmat(struct('jz',NaN,'jp',NaN,'jm',NaN,'repaired',false,'nspur',0,'mode',NaN), 1, Nper);
+sel = repmat(struct('jz',NaN,'jp',NaN,'jm',NaN,'repaired',false,'nspur',0), 1, Nper);
 nfallback = 0;
 nretry = 0;
 for ii = 1:Nper
@@ -258,11 +221,6 @@ for ii = 1:Nper
             [dmin, k] = min(abs(cz - c_guess(ii)));
             if dmin <= c_tol*c_guess(ii)
                 sel(ii).jz = jz(k); sel(ii).nspur = ndz;
-                if maxamp
-                    sel(ii).mode = k - 1;
-                else
-                    sel(ii).mode = nmode;
-                end
                 ok = true;
             end
         end
@@ -271,25 +229,30 @@ for ii = 1:Nper
             nfallback = nfallback + 1;
             [R{ii,2}, nto] = run_one(vec_T(ii)/ffac(2), nmodes, wavetype, tdispopt);
             ntimeout = ntimeout + nto;
-            sel(ii) = select_branch(R(ii,:), 2, vec_T(ii), nmode, dw_frac, U_tol, dup_tol, vs_hs, maxamp, nmax_amp, wavetype, isol);
-            ok = ~isnan(sel(ii).jz) || sel(ii).repaired;
+            sel(ii) = select_branch(R(ii,:), 2, vec_T(ii), nmode, dw_frac, U_tol, dup_tol, vs_hs);
+            ok = ~isnan(sel(ii).jz);
         end
         nf_ii = 2;
     else
-        sel(ii) = select_branch(R(ii,:), nfreq, vec_T(ii), nmode, dw_frac, U_tol, dup_tol, vs_hs, maxamp, nmax_amp, wavetype, isol);
-        ok = ~isnan(sel(ii).jz) || sel(ii).repaired;
+        sel(ii) = select_branch(R(ii,:), nfreq, vec_T(ii), nmode, dw_frac, U_tol, dup_tol, vs_hs);
+        ok = ~isnan(sel(ii).jz);
         nf_ii = nfreq;
     end
     if ~ok && nmod_used(ii) < nmodes + NRETRY
         % recompute this period with more modes (a spurious root may have
-        % taken the place of the requested one)
+        % taken the place of the requested one). This is tried before the
+        % root is rebuilt from the two neighbors (sel.repaired), which is
+        % only kept if the requested frequency still has no valid root.
         nretry = nretry + 1;
         for f = 1:nf_ii
             [R{ii,f}, nto] = run_one(vec_T(ii)/ffac(f), nmodes + NRETRY, wavetype, tdispopt);
             ntimeout = ntimeout + nto;
         end
         nmod_used(ii) = nmodes + NRETRY;
-        sel(ii) = select_branch(R(ii,:), nf_ii, vec_T(ii), nmode, dw_frac, U_tol, dup_tol, vs_hs, maxamp, nmax_amp, wavetype, isol);
+        sel_retry = select_branch(R(ii,:), nf_ii, vec_T(ii), nmode, dw_frac, U_tol, dup_tol, vs_hs);
+        if ~isnan(sel_retry.jz) || ~sel(ii).repaired
+            sel(ii) = sel_retry;
+        end
     end
 end
 if ntimeout > 0
@@ -310,12 +273,7 @@ eig_m = pickroots(R, 3, [sel.jm], tmpl, Nper);
 eig.periods = vec_T;
 eig_p.periods = vec_T/(1+dw_frac);
 eig_m.periods = vec_T/(1-dw_frac);
-if maxamp
-    modesel = [sel.mode];
-    eig.mode = modesel; eig_p.mode = modesel; eig_m.mode = modesel;
-else
-    eig.mode = nmode; eig_p.mode = nmode; eig_m.mode = nmode;
-end
+eig.mode = nmode; eig_p.mode = nmode; eig_m.mode = nmode;
 repaired = [sel.repaired];
 nspurious = [sel.nspur];
 
@@ -429,13 +387,11 @@ s.iper = ones(1,nr); s.imode = 0:nr-1;
 Rk.eig = read_der96_TI(derfile,wavetype,s);
 end
 
-function sel = select_branch(Ri, nfreq, T, nmode, dw_frac, U_tol, dup_tol, vs_hs, maxamp, nmax_amp, wavetype, isol)
-% Select root nmode (or, with maxamp, the branch among modes 0..nmax_amp
-% with the largest surface amplitude) at one period by following branches
-% through the computed frequencies (see ROOT VALIDATION).
-% Ri = {w, w(1+dw), w(1-dw)}. Returns 1-based root indices jz, jp, jm (NaN
-% if none) into Ri{f}, and the selected mode number.
-sel = struct('jz',NaN,'jp',NaN,'jm',NaN,'repaired',false,'nspur',0,'mode',NaN);
+function sel = select_branch(Ri, nfreq, T, nmode, dw_frac, U_tol, dup_tol, vs_hs)
+% Select root nmode at one period by following branches through the
+% computed frequencies (see ROOT VALIDATION). Ri = {w, w(1+dw), w(1-dw)}.
+% Returns 1-based root indices jz, jp, jm (NaN if none) into Ri{f}.
+sel = struct('jz',NaN,'jp',NaN,'jm',NaN,'repaired',false,'nspur',0);
 w = 2*pi/T;
 [cz, uz, jz, ndz] = getroots(Ri{1}, dup_tol, vs_hs);
 [cp, up, jp]      = getroots(Ri{2}, dup_tol, vs_hs);
@@ -475,34 +431,12 @@ end
 [~, Is] = sort(br(:,1));
 br = br(Is,:);
 good = find(isnan(br(:,2)) | br(:,2) > 0);
-if maxamp
-    ncand = min(numel(good), nmax_amp+1);
-    if ncand == 0
-        sel.nspur = ndz + sum(br(:,2) < 0);
-        return
-    end
-    exc = nan(1,ncand);
-    for jc = 1:ncand
-        bc = br(good(jc),:);
-        if ~isnan(bc(2))
-            exc(jc) = surfamp(Ri{1}, jz(bc(2)), wavetype, isol);
-        else % missed at w: mean of the neighbors
-            exc(jc) = mean([surfamp(Ri{3}, jm(bc(3)), wavetype, isol), ...
-                            surfamp(Ri{2}, jp(bc(4)), wavetype, isol)]);
-        end
-    end
-    [~, isel] = max(exc);
-    nsel = isel - 1;
-else
-    if numel(good) < nmode+1
-        sel.nspur = ndz + sum(br(:,2) < 0);
-        return
-    end
-    nsel = nmode;
+if numel(good) < nmode+1
+    sel.nspur = ndz + sum(br(:,2) < 0);
+    return
 end
-sel.mode = nsel;
-b = br(good(nsel+1),:);
-sel.nspur = sum(br(1:good(nsel+1),2) < 0) + ndz;
+b = br(good(nmode+1),:);
+sel.nspur = sum(br(1:good(nmode+1),2) < 0) + ndz;
 if ~isnan(b(2))
     sel.jz = jz(b(2));
 else
@@ -510,21 +444,6 @@ else
 end
 if ~isnan(b(3)); sel.jm = jm(b(3)); end
 if ~isnan(b(4)); sel.jp = jp(b(4)); end
-end
-
-function a = surfamp(Rk, j, wavetype, isol)
-% surface amplitude (source and receiver at the top of the solid) of root j
-% (1-based CPS root index) in the per-period output Rk:
-% AL*ut(top)^2 (Love) or AR*uz(top)^2 (Rayleigh)
-if isempty(Rk) || isempty(Rk.eig) || j > length(Rk.eig.amp)
-    a = NaN; return
-end
-e = Rk.eig;
-if strcmp(wavetype,'L')
-    a = e.amp(j) * e.ut(isol,j)^2;
-else
-    a = e.amp(j) * e.uz(isol,j)^2;
-end
 end
 
 function eig = applyQ(eig, model, qa, qb, fref)

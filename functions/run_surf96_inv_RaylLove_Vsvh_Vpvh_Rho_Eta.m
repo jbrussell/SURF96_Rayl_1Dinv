@@ -60,7 +60,7 @@ function [finalmod,cpre,unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cs
 % nit_recalc_G - number of iterations after which to recalculate the
 %                kernels (OPTIONAL, default nit_recalc_c)
 % nmodes - number of modes computed by tdisp96 at each period (OPTIONAL,
-%          default nmode+1, or N+1 for nmode = 'maxampN'; see calc_der96_TI.m)
+%          default nmode+1; see calc_der96_TI.m)
 %
 % COST: the phase velocities and kernels are computed with the CPS TI
 % programs; tdisp96 (Rayleigh waves especially) takes nearly all the time.
@@ -105,7 +105,7 @@ nit_recalc_G = nit_recalc_c;
 if length(varargin) >= 4 && ~isempty(varargin{4})
     nit_recalc_G = varargin{4};
 end
-nmodes = []; % default set by calc_der96_TI.m (nmode+1, or N+1 for nmode = 'maxampN')
+nmodes = nmode + 1; % default: only the modes needed (see calc_der96_TI.m)
 if length(varargin) >= 5 && ~isempty(varargin{5})
     nmodes = varargin{5};
 end

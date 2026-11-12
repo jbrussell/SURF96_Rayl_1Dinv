@@ -66,7 +66,10 @@ zmax = 600; % [km] maximum depth of model space
 nmode = 0; % mode branch number (0=fund)
 
 nit = 8; % total number of iterations
-nit_recalc_c = 1; % recalculate phase velocities and kernels every iteration
+nit_recalc_c = 1; % number of iterations after which to recalculate the phase velocities
+nit_recalc_G = nit_recalc_c; % number of iterations after which to recalculate the kernels
+nmodes = nmode+1; % number of modes computed by tdisp96 (more can help when spurious roots occur; see calc_der96_TI.m)
+fref = 1; % [Hz] reference frequency of the Q model (only used if the models have Qp, Qs)
 
 %% True model parameters
 dlnv_lid = 0.02;  z_lid = 70;           % fast lid: +2% at the Moho, 0 at z_lid
@@ -204,7 +207,8 @@ cstart(I_R) = dispR_surf96_TI(periods(I_R),startmod,nmode);
 cstart(I_L) = dispL_surf96_TI(periods(I_L),startmod,nmode);
 
 cases = struct('name', {'LVZ, kernels updated', 'LVZ, kernels fixed (start)', 'no LVZ, kernels updated'}, ...
-               'itrue', {1, 1, 2}, 'nit_recalc_c', {nit_recalc_c, nit+1, nit_recalc_c});
+               'itrue', {1, 1, 2}, 'nit_recalc_c', {nit_recalc_c, nit+1, nit_recalc_c}, ...
+               'nit_recalc_G', {nit_recalc_G, nit+1, nit_recalc_G});
 if ~run_comparisons; cases = cases(1); end
 res = struct([]);
 for ic = 1:length(cases)
@@ -216,7 +220,7 @@ for ic = 1:length(cases)
     fprintf('\n=== Inversion %d: %s ===\n', ic, cases(ic).name);
     tic;
     [fm, cpre, unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cstd,periods,wavetype,startmod,discs, ...
-        eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,eps_xi,eps_eta,z_dampbot,nit,cases(ic).nit_recalc_c,nmode,ic==1,vsv_thresh_xi);
+        eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,eps_xi,eps_eta,z_dampbot,nit,cases(ic).nit_recalc_c,nmode,ic==1,vsv_thresh_xi,fref,cases(ic).nit_recalc_G,nmodes);
     toc
     if ic == 1 && ~isempty(figdir); figure(2); print(gcf,'-dpng',[figdir,'LVZ_iterations.png']); end
     % xi uncertainty from the model covariance: xi = Vsh^2/Vsv^2

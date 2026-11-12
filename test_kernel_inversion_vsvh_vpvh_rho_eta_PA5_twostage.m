@@ -57,7 +57,10 @@ zmax = 600; % [km] maximum depth of model space
 nmode = 0; % mode branch number (0=fund)
 
 nit = 8; % total number of iterations
-nit_recalc_c = 1; % recalculate phase velocities and kernels every iteration
+nit_recalc_c = 1; % number of iterations after which to recalculate the phase velocities
+nit_recalc_G = nit_recalc_c; % number of iterations after which to recalculate the kernels
+nmodes = nmode+1; % number of modes computed by tdisp96 (more can help when spurious roots occur; see calc_der96_TI.m)
+fref = 1; % [Hz] reference frequency of the Q model (only used if the models have Qp, Qs)
 
 %% Starting and true models
 CARD = './MINEOS_CARD/pa5_5km.card';
@@ -127,7 +130,7 @@ for ic = 1:3
         case 2
             % stage 1: Rayleigh only, xi held at the starting model (1)
             [m1, cpre1] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs(I_R),cstd(I_R),periods(I_R),'R',startmod,discs, ...
-                eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,100,eps_eta,z_dampbot,nit,nit_recalc_c,nmode,0,vsv_thresh_xi);
+                eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,100,eps_eta,z_dampbot,nit,nit_recalc_c,nmode,0,vsv_thresh_xi,fref,nit_recalc_G,nmodes);
             fprintf('stage 1 (R only): chi2 = %.3f, max |xi-1| = %.4f\n', mean(((cobs(I_R)-cpre1)./cstd(I_R)).^2), ...
                 max(abs((m1(m1(:,3)>0,6)./m1(m1(:,3)>0,3)).^2-1)));
             stage1 = m1;
@@ -136,7 +139,7 @@ for ic = 1:3
             m0 = start_C; d0 = discs_C;
     end
     [fm, cpre, unc] = run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta(cobs,cstd,periods,wavetype,m0,d0, ...
-        eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,eps_xi,eps_eta,z_dampbot,nit,nit_recalc_c,nmode,0,vsv_thresh_xi);
+        eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,eps_xi,eps_eta,z_dampbot,nit,nit_recalc_c,nmode,0,vsv_thresh_xi,fref,nit_recalc_G,nmodes);
     toc
     nl = size(fm,1); xf = (fm(:,6)./fm(:,3)).^2; xs = nan(nl,1);
     for k = 1:nl
