@@ -17,7 +17,7 @@ if isempty(strfind(PATH,path2BIN))
 end
 addpath('./functions/')
 % Make binary files executable
-!chmod ++x ./bin_v3.30/*
+system('chmod +x ./bin_v3.30/*'); % (works in MATLAB and Octave)
 
 %% Inversion regularization parameters
 eps_data = 1; % data fit
@@ -86,7 +86,7 @@ discs = []; % for this simple example, don't allow discontinuities
 figure(1); clf;
 box on; hold on;
 h = plotlayermods(startmod(:,1),startmod(:,3),'-b');
-h.LineWidth = 2;
+set(h,'LineWidth',2);
 xlabel('Vs (km/s)');
 ylabel('Depth (km)');
 title('Starting Model');
@@ -143,15 +143,15 @@ set(gcf,'position',[370   372   967   580]);
 
 subplot(2,2,[1 3]); box on; hold on;
 h = plotlayermods(truemod(:,1),truemod(:,3),'-k');
-h.LineWidth = 2;
+set(h,'LineWidth',2);
 h = plotlayermods(startmod(:,1),startmod(:,3),'-b');
-h.LineWidth = 2;
+set(h,'LineWidth',2);
 h = plotlayermods(finalmod(:,1),finalmod(:,3),'-r');
-h.LineWidth = 2;
+set(h,'LineWidth',2);
 h = plotlayermods(finalmod(:,1),finalmod(:,3)-vs_std,'--r');
-h.LineWidth = 2;
+set(h,'LineWidth',2);
 h = plotlayermods(finalmod(:,1),finalmod(:,3)+vs_std,'--r');
-h.LineWidth = 2;
+set(h,'LineWidth',2);
 xlabel('Velocity');
 ylabel('Depth');
 set(gca,'FontSize',18,'linewidth',1.5);
@@ -162,7 +162,7 @@ subplot(2,2,2); box on; hold on;
 cpre = dispR_surf96(vec_T,finalmod,nmode);
 plot(vec_T,cstart,'-ob','linewidth',2);
 plot(vec_T,cpre,'-or','linewidth',2);
-errorbar(vec_T,cobs,2*cstd,'sk','markersize',8,'markerfacecolor','k','linewidth',2);
+he = errorbar(vec_T,cobs,2*cstd,'sk'); set(he,'markersize',8,'markerfacecolor','k','linewidth',2); % (property pairs via set: Octave compatible)
 legend({'c start','c final','c obs'},'Location','southeast')
 xlabel('Period');
 ylabel('Phase Velocity');

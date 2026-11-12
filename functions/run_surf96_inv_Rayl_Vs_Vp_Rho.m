@@ -1,4 +1,4 @@
-function [finalmod,cpre,vs_std,vp_std,rho_std] = run_surf96_inv_Rayl_Vs_Vp_Rho(cobs,cstd,periods,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,z_dampbot,nit,nit_recalc_c,vp_vs,rho_vs,nmode,varargin)
+function [finalmod,cpre,vs_std,vp_std,rho_std,unc] = run_surf96_inv_Rayl_Vs_Vp_Rho(cobs,cstd,periods,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,z_dampbot,nit,nit_recalc_c,vp_vs,rho_vs,nmode,varargin)
 % Do linearized inversion of Rayleigh wave phase velocities for Vs, Vp, 
 % and Density (rho) using surf96 to generate the kernels and to calculate 
 % phase velocity.
@@ -36,6 +36,14 @@ function [finalmod,cpre,vs_std,vp_std,rho_std] = run_surf96_inv_Rayl_Vs_Vp_Rho(c
 % vs_std - formal uncertainties on Vs [M x 1]
 % vp_std - formal uncertainties on Vp [M x 1]
 % rho_std - formal uncertainties on Rho [M x 1]
+% unc - structure with vs_std, vp_std, rho_std, the model covariance Cm and
+%       model resolution R [3M x 3M] (parameter order Vs, Vp, Rho), and the
+%       data resolution Ndat [N x N]
+%
+% The formal uncertainties are the data errors (cstd) propagated through
+% the generalized inverse Ginv = eps_data^2 (F'F)^-1 G'W'W of the final
+% iteration: Cm = Ginv*diag(cstd.^2)*Ginv'. They do not include the effect
+% of the regularization (see the resolution matrix R).
 %
 % jbrussell - 11/20/2022
 
@@ -175,11 +183,23 @@ for ii = 1:nit
     premod(:,2) = vp_pre;
     premod(:,4) = rho_pre;
     
-    % Model uncertainties
-    m_std = diag(inv(F'*F)).^(1/2);
+    % Model uncertainties and resolution
+    % (jbrussell 11/2026: previously diag(inv(F'*F)).^(1/2), which depends on
+    % the arbitrary regularization weights. The data errors are now
+    % propagated through the generalized inverse, as in
+    % run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta.m)
+    FtF = F'*F;
+    Ginv = eps_data^2 * (FtF \ (G'*(W'*W))); % generalized inverse [3M x N]
+    unc.R = Ginv * G;                        % model resolution [3M x 3M]
+    unc.Ndat = G * Ginv;                     % data resolution [N x N]
+    unc.Cm = Ginv * diag(cstd.^2) * Ginv';   % model covariance from data errors
+    m_std = sqrt(diag(unc.Cm));
     vs_std = m_std(1:nlayer);
     vp_std = m_std(nlayer+1:2*nlayer);
     rho_std = m_std(2*nlayer+1:3*nlayer);
+    unc.vs_std = vs_std;
+    unc.vp_std = vp_std;
+    unc.rho_std = rho_std;
     
     if mod(ii,nit_recalc_c)==0
         cpre = dispR_surf96(periods,premod,nmode,'C',fref);
@@ -199,15 +219,15 @@ for ii = 1:nit
             
             subplot(2,2,[1 3]); box on; hold on;
             h2 = plotlayermods(startmod(:,1),startmod(:,3),'-k');
-            h2.LineWidth = 4;
+            set(h2,'LineWidth',4);
             
             subplot(2,2,2); box on; hold on;
             plot(periods,cstart,'-ok','linewidth',4);
         end
         subplot(2,2,[1 3]);
         h2 = plotlayermods(premod(:,1),premod(:,3),'-');
-        h2.LineWidth = 2;
-        h2.Color = clrs(ii,:);
+        set(h2,'LineWidth',2);
+        set(h2,'Color',clrs(ii,:));
         xlabel('Vs (km/s)');
         ylabel('Depth (km)');
         title('Starting Model');
@@ -215,7 +235,7 @@ for ii = 1:nit
         
         subplot(2,2,2);
         plot(periods,cpre,'-o','color',clrs(ii,:),'linewidth',2);
-        errorbar(periods,cobs,2*cstd,'or','linewidth',4);
+        he = errorbar(periods,cobs,2*cstd,'or'); set(he,'linewidth',4); % (property pairs via set: Octave compatible)
         xlabel('Period');
         ylabel('Phase Velocity');
         set(gca,'FontSize',18,'linewidth',1.5);
