@@ -16,7 +16,7 @@ if(fid>=0)
     ip = 0;
 	while ~feof(fid)
     	stemp=fgetl(fid);
-	    if (contains(stemp,'MODE'))    % find where eigenfunctions begin
+	    if (~isempty(strfind(stemp,'MODE')))    % find where eigenfunctions begin
         	C = textscan(stemp,'%s WAVE      MODE #  %d' );
             rayl_love = C{1};
             mode_k = C{2};

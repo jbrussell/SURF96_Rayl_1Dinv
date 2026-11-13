@@ -48,7 +48,13 @@ fclose(fid);
 [~, log] = system([timeoutstr,'s',lower(wavetype),'egn96']);
 
 % write dispersion to output file (SREGN.ASC or SLEGN.ASC)
-[~, log] = system([timeoutstr,'sdpegn96 -',wavetype,' -C -U -G -A0 -E -ASC']);
+% (-E, the Rayleigh-wave ellipticity, is only requested for Rayleigh waves:
+% "sdpegn96 -L ... -E" crashes with a segmentation fault)
+if strcmp(wavetype,'R')
+    [~, log] = system([timeoutstr,'sdpegn96 -',wavetype,' -C -U -G -A0 -E -ASC']);
+else
+    [~, log] = system([timeoutstr,'sdpegn96 -',wavetype,' -C -U -G -A0 -ASC']);
+end
 
 disper = read_amp_ellip_gam96(['S',wavetype,'EGN.ASC'],wavetype,nmode);
 

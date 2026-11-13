@@ -17,7 +17,7 @@ if isempty(strfind(PATH,path2BIN))
 end
 addpath('./functions/')
 % Make binary files executable
-!chmod ++x ./bin_v3.30/*
+system('chmod +x ./bin_v3.30/*'); % (works in MATLAB and Octave)
 
 %% Inversion regularization parameters
 eps_data = 1; % data fit
@@ -32,6 +32,13 @@ zmax = 400; % [km] maximum depth of model space
 
 nmode = 0; % mode branch number (0=fund, 1=1st overtone, 2=2nd overtone, etc.)
 
+% Attenuation: use_Q = 1 includes Qp and Qs (from the card's Qkappa and Qmu)
+% in the true and starting models, so that the synthetic data, forward
+% calculations and kernels include the causal (physical dispersion)
+% correction; Q is held fixed (not inverted). use_Q = 0: elastic.
+use_Q = 0;
+fref = 1; % [Hz] reference frequency of the Q model
+
 % Other inversion parameters
 nit = 8; % total number of iterations
 nit_recalc_c = 1; % number of iterations after which to recalculate phase velocity and kernels
@@ -42,7 +49,7 @@ cardname = 'Nomelt_taper_eta_crust_INVpconstr_xi1.06_GRL19_Line1_dist100.00km';
 
 % Get MINEOS model
 CARD = ['./MINEOS_CARD/',cardname,'.card'];
-[truemod, discs] = card2mod(CARD,zmax); % true model
+[truemod, discs] = card2mod(CARD,zmax,use_Q); % true model ([... Qp Qs] if use_Q)
 % % Keep track of discontinuities
 % waterdepth = discs(1);
 % seddepth = discs(2);
@@ -58,14 +65,14 @@ truemod(2:Ibot,4) = truemod(2:Ibot,4)*1.1;
 % GENERATE SYNTHETIC DATASET
 % Calculate dispersion for perturbed starting model and true model (which is like the data)
 vec_T = logspace(log10(10),log10(40),20);
-cobs = dispR_surf96(vec_T,truemod,nmode); % "observations"
+cobs = dispR_surf96(vec_T,truemod,nmode,'C',fref); % "observations"
 cstd = cobs * 0.01; % observation uncertainties
 
 %% Starting model
 % load starting model
 % Get MINEOS model
 CARD = ['./MINEOS_CARD/',cardname,'.card'];
-[startmod, discs] = card2mod(CARD,zmax); % true model
+[startmod, discs] = card2mod(CARD,zmax,use_Q); % starting model
 
 vp_vs = startmod(:,2) ./ startmod(:,3); vp_vs(isinf(vp_vs))=0;
 rho_vs = startmod(:,4) ./ startmod(:,3); rho_vs(isinf(rho_vs))=0;
@@ -86,16 +93,16 @@ discs = []; % for this simple example, don't allow discontinuities
 figure(1); clf;
 box on; hold on;
 h = plotlayermods(startmod(:,1),startmod(:,3),'-b');
-h.LineWidth = 2;
+set(h,'LineWidth',2);
 xlabel('Vs (km/s)');
 ylabel('Depth (km)');
 title('Starting Model');
 set(gca,'FontSize',18,'linewidth',1.5);
 
 %% Do linearized inversion using surf96
-cstart = dispR_surf96(vec_T,startmod,nmode); % "predictions";
+cstart = dispR_surf96(vec_T,startmod,nmode,'C',fref); % "predictions";
 
-[finalmod, cpre, vs_std] = run_surf96_inv_Rayl_Vs_Vp_Rho(cobs,cstd,vec_T,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,z_dampbot,nit,nit_recalc_c,vp_vs,rho_vs,nmode);
+[finalmod, cpre, vs_std] = run_surf96_inv_Rayl_Vs_Vp_Rho(cobs,cstd,vec_T,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,z_dampbot,nit,nit_recalc_c,vp_vs,rho_vs,nmode,fref);
 
 %% Plot final kernels
 figure(101); clf;
@@ -103,7 +110,7 @@ set(gcf,'position',[300         547        1281         422],'color','w')
 Npers = length(vec_T);
 clr = jet(Npers);
 lgd = {};
-[dcdvs, dcdvp, dudvs, dudvp, zkern, dcdrho, dudrho] = calc_kernel96(finalmod, vec_T, 'R', 1, 0,nmode);
+[dcdvs, dcdvp, dudvs, dudvp, zkern, dcdrho, dudrho] = calc_kernel96(finalmod, vec_T, 'R', 1, 0,nmode,fref);
 subplot(1,3,1); box on; hold on;
 for ip = 1:Npers
     plot(dcdvs(:,ip),zkern,'-','color',clr(ip,:),'linewidth',2); hold on;
@@ -143,15 +150,15 @@ set(gcf,'position',[370   372   967   580]);
 
 subplot(2,2,[1 3]); box on; hold on;
 h = plotlayermods(truemod(:,1),truemod(:,3),'-k');
-h.LineWidth = 2;
+set(h,'LineWidth',2);
 h = plotlayermods(startmod(:,1),startmod(:,3),'-b');
-h.LineWidth = 2;
+set(h,'LineWidth',2);
 h = plotlayermods(finalmod(:,1),finalmod(:,3),'-r');
-h.LineWidth = 2;
+set(h,'LineWidth',2);
 h = plotlayermods(finalmod(:,1),finalmod(:,3)-vs_std,'--r');
-h.LineWidth = 2;
+set(h,'LineWidth',2);
 h = plotlayermods(finalmod(:,1),finalmod(:,3)+vs_std,'--r');
-h.LineWidth = 2;
+set(h,'LineWidth',2);
 xlabel('Velocity');
 ylabel('Depth');
 set(gca,'FontSize',18,'linewidth',1.5);
@@ -159,10 +166,10 @@ legend({'true','start','final'},'Location','southwest')
 % legend({'start','final'},'Location','southwest')
 
 subplot(2,2,2); box on; hold on;
-cpre = dispR_surf96(vec_T,finalmod,nmode);
+cpre = dispR_surf96(vec_T,finalmod,nmode,'C',fref);
 plot(vec_T,cstart,'-ob','linewidth',2);
 plot(vec_T,cpre,'-or','linewidth',2);
-errorbar(vec_T,cobs,2*cstd,'sk','markersize',8,'markerfacecolor','k','linewidth',2);
+he = errorbar(vec_T,cobs,2*cstd,'sk'); set(he,'markersize',8,'markerfacecolor','k','linewidth',2); % (property pairs via set: Octave compatible)
 legend({'c start','c final','c obs'},'Location','southeast')
 xlabel('Period');
 ylabel('Phase Velocity');

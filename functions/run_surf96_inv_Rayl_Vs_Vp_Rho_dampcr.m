@@ -1,4 +1,4 @@
-function [finalmod,cpre,vs_std,vp_std,rho_std] = run_surf96_inv_Rayl_Vs_Vp_Rho_dampcr(cobs,cstd,periods,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,z_dampbot,nit,nit_recalc_c,vp_vs,rho_vs,nmode,varargin)
+function [finalmod,cpre,vs_std,vp_std,rho_std,unc] = run_surf96_inv_Rayl_Vs_Vp_Rho_dampcr(cobs,cstd,periods,startmod,discs,eps_data,eps_H,eps_J,eps_F,eps_vpvs,eps_rhovs,z_dampbot,nit,nit_recalc_c,vp_vs,rho_vs,nmode,varargin)
 % Do linearized inversion of Rayleigh wave phase velocities for Vs, Vp, 
 % and Density (rho) using surf96 to generate the kernels and to calculate 
 % phase velocity. This version damps the crust to the starting model (see line 102)
@@ -15,7 +15,12 @@ function [finalmod,cpre,vs_std,vp_std,rho_std] = run_surf96_inv_Rayl_Vs_Vp_Rho_d
 % cobs - phase velocity observed km/s [N x 1]
 % cstd - phase velocity uncertainty km/s [N x 1]
 % periods - seconds [N x 1]
-% startmod - starting model: dz (km), vp (km/s), vs (km/s), rho (kg/m^3) [M x 4]
+% startmod - starting model: dz (km), vp (km/s), vs (km/s), rho (kg/m^3) [M x 4],
+%            or [dz vp vs rho Qp Qs] [M x 6] to include attenuation: the
+%            phase velocities and kernels then include the causal (physical
+%            dispersion) correction for that Q model (dispR_surf96 and
+%            calc_kernel96 with Q, reference frequency fref = optional
+%            last argument, default 1 Hz). Q is held fixed (not inverted).
 % discs - depth of desired discontinuities in smoothing (km) [any length x 1]
 % eps_data - weight for data fit as fraction of G norm [scalar]
 % eps_H - weight for norm damping as fraction of G norm [scalar]
@@ -36,6 +41,14 @@ function [finalmod,cpre,vs_std,vp_std,rho_std] = run_surf96_inv_Rayl_Vs_Vp_Rho_d
 % vs_std - formal uncertainties on Vs [M x 1]
 % vp_std - formal uncertainties on Vp [M x 1]
 % rho_std - formal uncertainties on Rho [M x 1]
+% unc - structure with vs_std, vp_std, rho_std, the model covariance Cm and
+%       model resolution R [3M x 3M] (parameter order Vs, Vp, Rho), and the
+%       data resolution Ndat [N x N]
+%
+% The formal uncertainties are the data errors (cstd) propagated through
+% the generalized inverse Ginv = eps_data^2 (F'F)^-1 G'W'W of the final
+% iteration: Cm = Ginv*diag(cstd.^2)*Ginv'. They do not include the effect
+% of the regularization (see the resolution matrix R).
 %
 % jbrussell - 11/20/2022
 
@@ -45,7 +58,9 @@ elseif length(varargin)==1
     fref = varargin{1};
 end
 
-eps_large = 1e9; % large weight to force constraint equation
+eps_large = 1e4; % large weight to force constraint equations, relative to the data kernel norm NA
+% (jbrussell 11/2026: was an absolute weight of 1e9, which made F'F
+% ill-conditioned; now scaled as in run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta.m)
 
 % Calculate kernels for G matrix using SURF96
 ifnorm = 0; % for plotting only
@@ -95,14 +110,16 @@ eps_F0 = eps_F*NA/NR;
 ind_dampstart = find(z > z_dampbot);
 H00(ind_dampstart,ind_dampstart) = H00(ind_dampstart,ind_dampstart).*linspace(1,1000,length(ind_dampstart));
 h0(ind_dampstart) = h0(ind_dampstart).*linspace(1,1000,length(ind_dampstart))';
-% Kill water layers
+% Kill water layers (net weight eps_large*NA once H00 is multiplied by eps_H0)
+w_large = eps_large*NA/eps_H0;
 ind_h2o = find(startmod(:,3)==0);
-H00(ind_h2o,ind_h2o) = H00(ind_h2o,ind_h2o)*eps_large;
-h0(ind_h2o) = h0(ind_h2o)*eps_large;
+H00(ind_h2o,ind_h2o) = H00(ind_h2o,ind_h2o)*w_large;
+h0(ind_h2o) = h0(ind_h2o)*w_large;
 % Damp crust to starting model
 ind_cr = find(startmod(:,2)<7);
-H00(ind_cr,ind_cr) = H00(ind_cr,ind_cr)*eps_large;
-h0(ind_cr) = h0(ind_cr)*eps_large;
+ind_cr = setdiff(ind_cr, ind_h2o); % water is already fixed above
+H00(ind_cr,ind_cr) = H00(ind_cr,ind_cr)*w_large;
+h0(ind_cr) = h0(ind_cr)*w_large;
 % J00 = break_constraint(J00, z, z(ind_cr(end)));
 % F00 = break_constraint(F00, z, z(ind_cr(end)));
 
@@ -135,8 +152,8 @@ end
 rho_h2o_vec = 1.03 * ones(length(ind_h2o),1);
 
 % combine all constraints
-H = [H00*eps_H0; J00*eps_J0; F00*eps_F0; VP_VS_mat*eps_vpvs0; RHO_VS_mat*eps_rhovs0; VP_h2o_mat*eps_large; RHO_h2o_mat*eps_large];
-h = [h0*eps_H0; j0*eps_J0; f0*eps_F0; vp_vs_vec*eps_vpvs0; rho_vs_vec*eps_rhovs0; vp_h2o_vec*eps_large; rho_h2o_vec*eps_large];
+H = [H00*eps_H0; J00*eps_J0; F00*eps_F0; VP_VS_mat*eps_vpvs0; RHO_VS_mat*eps_rhovs0; VP_h2o_mat*eps_large*NA; RHO_h2o_mat*eps_large*NA];
+h = [h0*eps_H0; j0*eps_J0; f0*eps_F0; vp_vs_vec*eps_vpvs0; rho_vs_vec*eps_rhovs0; vp_h2o_vec*eps_large*NA; rho_h2o_vec*eps_large*NA];
 
 % Data vector
 cstart = dispR_surf96(periods,startmod,nmode,'C',fref); % "predictions";
@@ -181,11 +198,23 @@ for ii = 1:nit
     premod(:,2) = vp_pre;
     premod(:,4) = rho_pre;
     
-    % Model uncertainties
-    m_std = diag(inv(F'*F)).^(1/2);
+    % Model uncertainties and resolution
+    % (jbrussell 11/2026: previously diag(inv(F'*F)).^(1/2), which depends on
+    % the arbitrary regularization weights. The data errors are now
+    % propagated through the generalized inverse, as in
+    % run_surf96_inv_RaylLove_Vsvh_Vpvh_Rho_Eta.m)
+    FtF = F'*F;
+    Ginv = eps_data^2 * (FtF \ (G'*(W'*W))); % generalized inverse [3M x N]
+    unc.R = Ginv * G;                        % model resolution [3M x 3M]
+    unc.Ndat = G * Ginv;                     % data resolution [N x N]
+    unc.Cm = Ginv * diag(cstd.^2) * Ginv';   % model covariance from data errors
+    m_std = sqrt(diag(unc.Cm));
     vs_std = m_std(1:nlayer);
     vp_std = m_std(nlayer+1:2*nlayer);
     rho_std = m_std(2*nlayer+1:3*nlayer);
+    unc.vs_std = vs_std;
+    unc.vp_std = vp_std;
+    unc.rho_std = rho_std;
     
     if mod(ii,nit_recalc_c)==0
         cpre = dispR_surf96(periods,premod,nmode,'C',fref);
@@ -193,7 +222,9 @@ for ii = 1:nit
         
         ifnorm = 0; % for plotting only
         ifplot = 0;
-        [dcdvs, dcdvp, dudvs, dudvp, zkern, dcdrho, dudrho] = calc_kernel96(startmod, periods, 'R', ifnorm, ifplot,nmode,fref);
+        % kernels for the current model (jbrussell 11/2026: was startmod,
+        % so the kernels were never updated)
+        [dcdvs, dcdvp, dudvs, dudvp, zkern, dcdrho, dudrho] = calc_kernel96(premod, periods, 'R', ifnorm, ifplot,nmode,fref);
         G = [dcdvs' dcdvp' dcdrho'];
     end
     
@@ -203,15 +234,15 @@ for ii = 1:nit
             
             subplot(2,2,[1 3]); box on; hold on;
             h2 = plotlayermods(startmod(:,1),startmod(:,3),'-k');
-            h2.LineWidth = 4;
+            set(h2,'LineWidth',4);
             
             subplot(2,2,2); box on; hold on;
             plot(periods,cstart,'-ok','linewidth',4);
         end
         subplot(2,2,[1 3]);
         h2 = plotlayermods(premod(:,1),premod(:,3),'-');
-        h2.LineWidth = 2;
-        h2.Color = clrs(ii,:);
+        set(h2,'LineWidth',2);
+        set(h2,'Color',clrs(ii,:));
         xlabel('Vs (km/s)');
         ylabel('Depth (km)');
         title('Starting Model');
@@ -219,7 +250,7 @@ for ii = 1:nit
         
         subplot(2,2,2);
         plot(periods,cpre,'-o','color',clrs(ii,:),'linewidth',2);
-        errorbar(periods,cobs,2*cstd,'or','linewidth',4);
+        he = errorbar(periods,cobs,2*cstd,'or'); set(he,'linewidth',4); % (property pairs via set: Octave compatible)
         xlabel('Period');
         ylabel('Phase Velocity');
         set(gca,'FontSize',18,'linewidth',1.5);
