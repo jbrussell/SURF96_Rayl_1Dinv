@@ -201,6 +201,39 @@ xlabel('\xi_{final} - \xi_{true}'); ylim([0 300]); xlim([-0.1 0.1]);
 set(gca,'FontSize',14,'linewidth',1.5,'ydir','reverse');
 if ~isempty(figdir); print(gcf,'-dpng',[figdir,'PA5_two_stage.png']); end
 
+%% Plot data fit (all inversions)
+cstart = zeros(size(periods)); % smooth starting model (A, B stage 1)
+cstart(I_R) = dispR_surf96_TI(periods(I_R),startmod,nmode);
+cstart(I_L) = dispL_surf96_TI(periods(I_L),startmod,nmode);
+cstage1 = zeros(size(periods)); % stage-1 model (start of B stage 2)
+cstage1(I_R) = cpre1;
+cstage1(I_L) = dispL_surf96_TI(periods(I_L),stage1,nmode);
+figure(111); clf; set(gcf,'position',[300 300 1200 800],'color','w');
+for iw = 1:length(data_types)
+    wt = data_types(iw);
+    I_w = wavetype == wt;
+    subplot(2,length(data_types),iw); box on; hold on;
+    hs = plot(periods(I_w),cstart(I_w),'-ob','linewidth',2);
+    h1 = plot(periods(I_w),cstage1(I_w),'--o','color',clrc(2,:),'linewidth',2);
+    hc = [];
+    for ic = 1:length(res)
+        hc(ic) = plot(periods(I_w),res(ic).cpre(I_w),'-o','color',clrc(ic,:),'linewidth',2);
+    end
+    he = errorbar(periods(I_w),cobs(I_w),2*cstd(I_w),'sk'); set(he,'markersize',6,'markerfacecolor','k','linewidth',1.5);
+    if iw==1; legend([hs h1 hc he],[{'c start (smooth)','c stage 1 (R only)'}, names, {'c obs (PA5)'}],'Location','southeast','fontsize',10); end
+    xlabel('Period (s)'); ylabel([wt,' phase velocity (km/s)']);
+    set(gca,'FontSize',14,'linewidth',1.5,'xscale','log'); xlim([9 160]);
+    subplot(2,length(data_types),length(data_types)+iw); box on; hold on;
+    plot([9 160],[0 0],'-k');
+    plot(periods(I_w),(cobs(I_w)-cstage1(I_w))./cstd(I_w),'--o','color',clrc(2,:),'linewidth',2);
+    for ic = 1:length(res)
+        plot(periods(I_w),(cobs(I_w)-res(ic).cpre(I_w))./cstd(I_w),'-o','color',clrc(ic,:),'linewidth',2);
+    end
+    xlabel('Period (s)'); ylabel([wt,' (c_{obs}-c_{pre})/\sigma']);
+    set(gca,'FontSize',14,'linewidth',1.5,'xscale','log'); xlim([9 160]);
+end
+if ~isempty(figdir); print(gcf,'-dpng',[figdir,'PA5_two_stage_data_fit.png']); end
+
 %% Plot Rayleigh and Love kernels of the true model (PA5) at all periods
 Npers = length(vec_T);
 clr = jet(Npers);
@@ -215,7 +248,7 @@ for iw = 1:length(data_types)
         xl = {'dc/dV_{SV}','dc/dV_{SH}','dc/d\rho'};
     end
     kernel = calc_kernel96_TI(truemod, vec_T, wt, 1, 0, nmode, fref, struct('phase_only',true,'nmodes',nmodes));
-    figure(110+iw); clf;
+    figure(111+iw); clf;
     set(gcf,'position',[100 100 1500 450],'color','w')
     nf = length(flds);
     for k = 1:nf
