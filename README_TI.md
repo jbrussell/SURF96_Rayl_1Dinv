@@ -173,6 +173,43 @@ results. The final figure compares the true, starting and recovered Vsv,
 Vsh, Vpv, Vph, ρ, η and ξ with formal 1σ uncertainties.
 `card2mod_TI.m` converts a MINEOS card to the TI layered model format.
 
+## Synthetic seismograms (mode summation)
+
+`calc_synth96_TI.m` computes Z/R/T synthetic seismograms for a TI model by
+surface-wave mode summation (CPS `tprep96`, `tdisp96`, `tlegn96`/`tregn96`,
+`tpulse96`, `fmech96`, `f96tosac`):
+
+```matlab
+par.hs = 15; par.hr = 5; par.dt = 1; par.npts = 4096; par.fmax = 0.2; par.nmod = 20;
+par.modesel = {'all', 0, 1};      % all modes, mode 0 only, mode 1 only
+par.pulse = 't'; par.L = 3;       % triangle of base 2*L*dt
+src.strike = 30; src.dip = 60; src.rake = 45; src.Mw = 6; src.az = 60;
+syn = calc_synth96_TI(model, [1000 2000], par, src);   % syn.Z, syn.R, syn.T [npts x ndist x nsel]
+```
+
+The source is a double couple (strike/dip/rake with Mw or M0), a moment
+tensor (`src.mt`) or a point force (`src.force`, e.g. to model noise
+cross-correlations). A receiver exactly at the sea floor is moved 0.01 km
+into the solid; at the water bottom, CPS gives zero Love-wave motion. Notes:
+- **Frequency content:** the highest frequency is 1/(2·dt), or `par.fmax`
+  if lower. The pulse, `par.nmod` (complete to ~5 s for 20 Love modes in
+  PA5), Q and the layering also limit it. The record repeats every
+  npts·dt seconds, so make it longer than the slowest arrival.
+- **Mode numbers** are those of `tdisp96`, ordered by phase velocity.
+  `tpulse96` does not reject the occasional spurious root (see
+  `calc_der96_TI.m`). Body waves are not included.
+- **Programs to build:** `tpulse96` (VOLIII), `fmech96` and `f96tosac`
+  (VOLV) are **not in `bin_v3.30/`**. Build them from `src.zip`
+  (PROGRAMS.330).
+
+`test_synth_seismogram_TI.m` compares the all-modes, mode-0 and mode-1
+synthetics for PA5 (Mw 6, 10 km below the sea floor, sea-floor station at
+1000 and 2000 km). At 2000 km, mode 1 dominates the Love wave at 10–30 s
+and mode 0 is small. At 30–60 s both are large and interfere, and mode 0
+dominates above 60 s. On the vertical component, mode 1 also dominates at
+10–15 s; mode 0 there is the slow wave guided by the water and sediment.
+Mode 0 dominates the vertical component above 15 s.
+
 ## Benchmarks
 
 ```matlab
