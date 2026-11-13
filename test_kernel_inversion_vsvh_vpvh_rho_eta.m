@@ -48,11 +48,6 @@ fref = 1; % [Hz] reference frequency of the Q model
 %% Inversion regularization parameters
 eps_data = 1; % data fit
 eps_H = 0.005; % norm damping
-% Note: the norm damping pulls Vsv and Vsh toward their absolute starting
-% values. Love waves need a larger change in Vsh (velocity change + xi)
-% than Rayleigh waves need in Vsv, so a damping as strong as in
-% test_kernel_inversion_vs_vp_rho.m (0.05) leaves the long-period Love
-% data systematically underpredicted and xi underestimated.
 eps_J = 0.001; % first derivative smoothing
 eps_F = 2; % second derivative smoothing
 eps_vpvs = 10; % enforce Vpv/Vsv and Vph/Vsh ratios
@@ -72,7 +67,7 @@ zmax = 400; % [km] maximum depth of model space
 nmode = 0; % mode branch number (0=fund, 1=1st overtone, 2=2nd overtone, etc.)
 
 % Other inversion parameters
-nit = 8; % total number of iterations
+nit = 2; % total number of iterations
 nit_recalc_c = 1; % number of iterations after which to recalculate the phase velocities
 nit_recalc_G = nit_recalc_c; % number of iterations after which to recalculate the kernels
 nmodes = nmode+1; % number of modes computed by tdisp96 (more can help when spurious roots occur; see calc_der96_TI.m)
