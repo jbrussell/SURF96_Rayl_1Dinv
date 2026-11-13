@@ -200,3 +200,36 @@ end
 xlabel('\xi_{final} - \xi_{true}'); ylim([0 300]); xlim([-0.1 0.1]);
 set(gca,'FontSize',14,'linewidth',1.5,'ydir','reverse');
 if ~isempty(figdir); print(gcf,'-dpng',[figdir,'PA5_two_stage.png']); end
+
+%% Plot Rayleigh and Love kernels of the true model (PA5) at all periods
+Npers = length(vec_T);
+clr = jet(Npers);
+lgd = arrayfun(@(T) sprintf('%.1f s',T), vec_T, 'uniformoutput', false);
+for iw = 1:length(data_types)
+    wt = data_types(iw);
+    if wt == 'R'
+        flds = {'dcdvsv','dcdvsh','dcdvpv','dcdvph','dcdrho','dcdeta'};
+        xl = {'dc/dV_{SV}','dc/dV_{SH}','dc/dV_{PV}','dc/dV_{PH}','dc/d\rho','dc/d\eta'};
+    else % Love waves are not sensitive to Vpv, Vph, eta
+        flds = {'dcdvsv','dcdvsh','dcdrho'};
+        xl = {'dc/dV_{SV}','dc/dV_{SH}','dc/d\rho'};
+    end
+    kernel = calc_kernel96_TI(truemod, vec_T, wt, 1, 0, nmode, fref, struct('phase_only',true,'nmodes',nmodes));
+    figure(110+iw); clf;
+    set(gcf,'position',[100 100 1500 450],'color','w')
+    nf = length(flds);
+    for k = 1:nf
+        subplot(1,nf,k); box on; hold on;
+        for ip = 1:Npers
+            plot(kernel.(flds{k})(:,ip),kernel.z,'-','color',clr(ip,:),'linewidth',2);
+        end
+        xlabel(xl{k});
+        if k==1; ylabel('Depth (km)'); title([wt,' kernels, true model (PA5)']); end
+        ylim([0 400]);
+        set(gca,'fontsize',13,'linewidth',1.5,'ydir','reverse');
+    end
+    pos = get(gca,'Position');
+    legend(lgd,'location','eastoutside');
+    set(gca,'position',pos);
+    if ~isempty(figdir); print(gcf,'-dpng',[figdir,'PA5_kernels_true_',wt,'.png']); end
+end
