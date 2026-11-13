@@ -47,7 +47,7 @@ fref = 1; % [Hz] reference frequency of the Q model
 
 %% Inversion regularization parameters
 eps_data = 1; % data fit
-eps_H = 0.005; % norm damping
+eps_H = 0.02; % norm damping
 eps_J = 0.001; % first derivative smoothing
 eps_F = 2; % second derivative smoothing
 eps_vpvs = 10; % enforce Vpv/Vsv and Vph/Vsh ratios
@@ -61,7 +61,7 @@ end
 
 vsv_thresh_xi = 4; % [km/s] hold xi at the starting model where Vsv < this ("crust"); 0 = off
 
-z_dampbot = 150; % [km] damp to starting model below this depth
+z_dampbot = 250; % [km] damp to starting model below this depth
 zmax = 400; % [km] maximum depth of model space
 
 nmode = 0; % mode branch number (0=fund, 1=1st overtone, 2=2nd overtone, etc.)
@@ -92,14 +92,14 @@ truemod(2:Ibot,[2 3 4 5 6]) = truemod(2:Ibot,[2 3 4 5 6])*1.05;
 % by the factor sqrt(xi_true), so that xi = (Vsh/Vsv)^2 = xi_true and
 % phi = (Vpv/Vph)^2 = 1/xi_true. (The inversion ties Vph to Vsh, so the P
 % anisotropy of the true model is consistent with that parameterization.)
-xi_true = 1.08;
-I_ani = find(zmid>=30 & zmid<=150);
+xi_true = 1.15;
+I_ani = find(zmid>=20 & zmid<=200);
 truemod(I_ani,6) = truemod(I_ani,6)*sqrt(xi_true); % Vsh
 truemod(I_ani,5) = truemod(I_ani,5)*sqrt(xi_true); % Vph
 
 % GENERATE SYNTHETIC DATASET
 % Calculate dispersion for the true model (which is like the data)
-vec_T = logspace(log10(10),log10(40),15);
+vec_T = logspace(log10(10),log10(150),15);
 periods = []; wavetype = '';
 for wt = data_types
     periods = [periods; vec_T(:)];
